@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
     <meta name="description" content="A customizable Promodoro timer application for improved productivity and time management">
     <meta name="theme-color" content="#d95550">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -108,11 +108,15 @@
             const closeModal = document.querySelector('.close-modal');
             
             if (helpButton && helpModal && closeModal) {
-                helpButton.addEventListener('click', () => {
+                helpButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     helpModal.style.display = 'block';
                 });
                 
-                closeModal.addEventListener('click', () => {
+                closeModal.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
                     helpModal.style.display = 'none';
                 });
                 
@@ -128,34 +132,44 @@
         });
         
         function initializeMobileFeatures() {
-            // Prevent zoom on input focus (iOS Safari)
-            if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            // Better mobile viewport handling
+            function updateViewport() {
                 const viewport = document.querySelector('meta[name=viewport]');
-                viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover');
+                if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+                    viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=3.0, viewport-fit=cover, user-scalable=yes');
+                }
             }
+            updateViewport();
             
-            // Hide address bar on mobile after load
-            setTimeout(() => {
-                if (window.scrollY === 0) {
-                    window.scrollTo(0, 1);
-                    window.scrollTo(0, 0);
+            // Prevent zoom on double tap but allow pinch zoom
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function (event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
                 }
-            }, 1000);
+                lastTouchEnd = now;
+            }, false);
             
-            // Prevent pull-to-refresh on mobile
-            document.body.addEventListener('touchstart', (e) => {
-                if (e.touches.length === 1 && window.scrollY === 0) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
+            // Better focus handling for mobile inputs
+            const inputs = document.querySelectorAll('input, button');
+            inputs.forEach(input => {
+                input.addEventListener('touchstart', function() {
+                    this.style.transform = 'scale(0.98)';
+                }, {passive: true});
+                
+                input.addEventListener('touchend', function() {
+                    this.style.transform = '';
+                }, {passive: true});
+            });
             
-            // Add haptic feedback for iOS devices
+            // Add haptic feedback for buttons
             if ('vibrate' in navigator) {
-                document.addEventListener('click', (e) => {
+                document.addEventListener('touchstart', (e) => {
                     if (e.target.tagName === 'BUTTON') {
-                        navigator.vibrate(50);
+                        navigator.vibrate(30);
                     }
-                });
+                }, {passive: true});
             }
             
             // Request persistent storage for PWA
@@ -171,27 +185,48 @@
                 console.log('Running in PWA mode');
             }
             
-            // Handle orientation changes
+            // Handle orientation changes with proper delay
+            let orientationTimer;
             window.addEventListener('orientationchange', () => {
-                // Delay to allow orientation to complete
-                setTimeout(() => {
+                clearTimeout(orientationTimer);
+                orientationTimer = setTimeout(() => {
                     // Force layout recalculation
                     document.body.style.height = '100vh';
                     setTimeout(() => {
                         document.body.style.height = '';
+                        // Scroll to top to hide address bar
+                        window.scrollTo(0, 0);
                     }, 100);
                 }, 500);
             });
             
-            // Better focus management for mobile
+            // Better focus management for mobile inputs
             document.addEventListener('focusin', (e) => {
                 if (e.target.tagName === 'INPUT') {
-                    // Scroll input into view on mobile
+                    // Small delay to ensure keyboard is open
                     setTimeout(() => {
-                        e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        e.target.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center',
+                            inline: 'nearest'
+                        });
                     }, 300);
                 }
             });
+            
+            // Prevent body scroll when modal is open (mobile fix)
+            const modal = document.getElementById('help-modal');
+            if (modal) {
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.attributeName === 'style') {
+                            const isVisible = modal.style.display === 'block';
+                            document.body.style.overflow = isVisible ? 'hidden' : '';
+                        }
+                    });
+                });
+                observer.observe(modal, { attributes: true });
+            }
         }
     </script>
     
