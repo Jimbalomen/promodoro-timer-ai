@@ -1,13 +1,12 @@
 // Service Worker for Promodoro App
 
-const CACHE_NAME = 'promodoro-app-v2';
+const CACHE_NAME = 'promodoro-app-v3';
 const urlsToCache = [
-  'index.html',
+  '/',
+  '/index.html',
   'app-simple.js',
   'styles/main.css',
-  'manifest.json',
-  'icons/icon-192x192.png',
-  'icons/icon-512x512.png'
+  'manifest.json'
 ];
 
 // Install event - cache assets
