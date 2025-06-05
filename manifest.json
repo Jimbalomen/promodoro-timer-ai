@@ -2,7 +2,7 @@
   "name": "Promodoro Timer",
   "short_name": "Promodoro",
   "description": "A customizable Promodoro timer for productivity",
-  "start_url": "./index-simple.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#d95550",
@@ -65,7 +65,7 @@
       "name": "Ξεκίνα Promodoro",
       "short_name": "Start Timer",
       "description": "Ξεκίνα άμεσα ένα Promodoro session",
-      "url": "./index-simple.html?action=start",
+      "url": "./index.html?action=start",
       "icons": [
         {
           "src": "icons/icon-192x192.png",

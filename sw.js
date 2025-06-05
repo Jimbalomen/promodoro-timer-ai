@@ -1,10 +1,11 @@
 // Service Worker for Promodoro App
 
-const CACHE_NAME = 'promodoro-app-v1';
+const CACHE_NAME = 'promodoro-app-v2';
 const urlsToCache = [
-  'index-simple.html',
+  'index.html',
   'app-simple.js',
   'styles/main.css',
+  'manifest.json',
   'icons/icon-192x192.png',
   'icons/icon-512x512.png'
 ];
