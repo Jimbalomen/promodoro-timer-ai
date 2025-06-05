@@ -88,6 +88,10 @@
     font-weight: 500;
     position: relative;
     z-index: 1;
+    /* Chrome mobile fixes */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    outline: none;
   }
   
   .mode-buttons button:hover,
@@ -141,6 +145,31 @@
     transition: all 0.2s ease;
     position: relative;
     z-index: 1;
+    /* Chrome mobile fixes */
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    outline: none;
+  }
+  
+  /* Stop button styling - better visibility */
+  #timer-control[data-action="stop"] {
+    background-color: #ff4444;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  }
+  
+  #timer-control[data-action="stop"]:hover,
+  #timer-control[data-action="stop"]:focus {
+    background-color: #ff6666;
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+  }
+  
+  #timer-control[data-action="stop"]:active {
+    background-color: #ff2222;
+    transform: translateY(1px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
   }
   
   #timer-control:hover,
@@ -186,6 +215,9 @@
     min-height: 48px;
     box-sizing: border-box;
     transition: all 0.2s ease;
+    /* Chrome mobile fixes */
+    -webkit-tap-highlight-color: transparent;
+    outline: none;
   }
   
   #task-input:focus {
@@ -218,6 +250,8 @@
       padding: 5px;
       align-items: flex-start;
       padding-top: 20px;
+      /* Chrome mobile specific */
+      -webkit-overflow-scrolling: touch;
     }
     
     .container {
@@ -254,6 +288,14 @@
       min-height: 50px;
     }
     
+    #task-input {
+      padding: 12px 14px;
+      font-size: 16px;
+      min-height: 44px;
+      /* Chrome iOS zoom prevention */
+      font-size: 16px !important;
+    }
+    
     .task-container,
     .stats {
       padding: 16px;
@@ -262,12 +304,6 @@
     h3 {
       font-size: 15px;
       margin-bottom: 12px;
-    }
-    
-    #task-input {
-      padding: 12px 14px;
-      font-size: 16px;
-      min-height: 44px;
     }
     
     #task-list li {
@@ -340,6 +376,22 @@
     }
   }
 
+  /* Chrome Android specific fixes */
+  @media screen and (-webkit-min-device-pixel-ratio: 0) {
+    .mode-buttons button,
+    #timer-control,
+    #task-input {
+      -webkit-appearance: none;
+      -webkit-border-radius: 8px;
+      border-radius: 8px;
+    }
+    
+    #timer-control {
+      -webkit-transform: translateZ(0);
+      transform: translateZ(0);
+    }
+  }
+
   /* High DPI displays */
   @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
     .progress-bar {
@@ -405,12 +457,17 @@
   #task-input {
     position: relative;
     z-index: 2;
+    /* Force hardware acceleration for better touch response */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
   }
 
   /* Better mobile button hover states */
   @media (hover: none) and (pointer: coarse) {
     .mode-buttons button:hover,
-    #timer-control:hover {
+    #timer-control:hover,
+    #timer-control[data-action="stop"]:hover {
       transform: none;
       background-color: initial;
     }
@@ -418,5 +475,10 @@
     .mode-buttons button:active,
     #timer-control:active {
       transform: scale(0.98);
+    }
+    
+    #timer-control[data-action="stop"]:active {
+      transform: scale(0.98);
+      background-color: #ff2222;
     }
   }

@@ -141,6 +141,55 @@
             }
             updateViewport();
             
+            // Chrome mobile specific fixes
+            function setupChromeCompatibility() {
+                const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+                const isAndroid = /Android/.test(navigator.userAgent);
+                
+                if (isChrome && isAndroid) {
+                    console.log('Chrome Android detected - applying fixes');
+                    
+                    // Force touch events to be more responsive
+                    const clickableElements = document.querySelectorAll('button, input, [data-mode], #timer-control');
+                    
+                    clickableElements.forEach(element => {
+                        // Add explicit touch handling for Chrome Android
+                        element.addEventListener('touchstart', function(e) {
+                            e.stopPropagation();
+                            this.style.transform = 'scale(0.98)';
+                            this.style.transition = 'transform 0.1s ease';
+                        }, { passive: true });
+                        
+                        element.addEventListener('touchend', function(e) {
+                            e.stopPropagation();
+                            this.style.transform = '';
+                            this.style.transition = 'transform 0.2s ease';
+                            
+                            // Ensure click event fires
+                            setTimeout(() => {
+                                if (e.target === this) {
+                                    this.click();
+                                }
+                            }, 50);
+                        }, { passive: true });
+                        
+                        element.addEventListener('touchcancel', function() {
+                            this.style.transform = '';
+                        }, { passive: true });
+                    });
+                    
+                    // Prevent Chrome's automatic zoom on inputs
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    inputs.forEach(input => {
+                        input.addEventListener('focus', function() {
+                            this.style.fontSize = '16px';
+                        });
+                    });
+                }
+            }
+            
+            setupChromeCompatibility();
+            
             // Prevent zoom on double tap but allow pinch zoom
             let lastTouchEnd = 0;
             document.addEventListener('touchend', function (event) {
@@ -227,6 +276,15 @@
                 });
                 observer.observe(modal, { attributes: true });
             }
+            
+            // Ensure buttons are always clickable (Chrome fix)
+            setTimeout(() => {
+                const buttons = document.querySelectorAll('button');
+                buttons.forEach(button => {
+                    button.style.pointerEvents = 'auto';
+                    button.style.touchAction = 'manipulation';
+                });
+            }, 100);
         }
     </script>
     
