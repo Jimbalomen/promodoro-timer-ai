@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Promodoro App</title>
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <div class="mode-buttons">
+            <button data-mode="promodoro" class="active">Promodoro</button>
+            <button data-mode="shortBreak">Short Break</button>
+            <button data-mode="longBreak">Long Break</button>
+        </div>
+        
+        <div class="timer">
+            <span id="minutes">25</span>:<span id="seconds">00</span>
+        </div>
+        
+        <button id="timer-control" data-action="start">Start</button>
+        
+        <div class="task-container">
+            <h3>Current Task</h3>
+            <input type="text" id="task-input" placeholder="What are you working on?">
+            <ul id="task-list"></ul>
+        </div>
+        
+        <div class="stats">
+            <span>Completed sessions: <span id="promodoro-count">0</span></span>
+        </div>
+    </div>
+    
+    <script type="module" src="scripts/app.js"></script>
+</body>
+</html>

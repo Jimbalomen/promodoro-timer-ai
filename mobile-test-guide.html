@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Mobile Testing Guide - Promodoro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #ccc;
+            margin-bottom: 30px;
+        }
+        .section {
+            background: rgba(255,255,255,0.1);
+            margin: 25px 0;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #4CAF50;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #4CAF50;
+            font-size: 1.4em;
+        }
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+        .checklist li {
+            padding: 8px 0;
+            margin: 8px 0;
+            background: rgba(255,255,255,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            position: relative;
+            padding-left: 40px;
+        }
+        .checklist li::before {
+            content: "✓";
+            position: absolute;
+            left: 12px;
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .device-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .device-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .device-card h4 {
+            margin-top: 0;
+            color: #FFD700;
+        }
+        .warning {
+            background: rgba(255,193,7,0.2);
+            border-left: 5px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: rgba(76,175,80,0.2);
+            border-left: 5px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 5px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .test-steps {
+            counter-reset: step-counter;
+        }
+        .test-steps li {
+            counter-increment: step-counter;
+            padding-left: 50px;
+            position: relative;
+        }
+        .test-steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 12px;
+            background: #4CAF50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .emoji {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 20px;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .device-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Mobile Testing Guide</h1>
+        <p class="subtitle">Πλήρης έλεγχος για mobile compatibility</p>
+        
+        <div class="success">
+            <h3>🎯 Τι ελέγχουμε:</h3>
+            <ul>
+                <li>✅ Responsive design σε όλες τις συσκευές</li>
+                <li>✅ Touch-friendly interactions</li>
+                <li>✅ PWA functionality</li>
+                <li>✅ Performance στο mobile</li>
+                <li>✅ Cross-browser compatibility</li>
+            </ul>
+        </div>
+
+        <div class="device-grid">
+            <div class="device-card">
+                <div class="icon">📱</div>
+                <h4>Smartphones</h4>
+                <p>320px - 480px</p>
+                <div class="code">iPhone SE, Android</div>
+            </div>
+            
+            <div class="device-card">
+                <div class="icon">📲</div>
+                <h4>Large Phones</h4>
+                <p>480px - 768px</p>
+                <div class="code">iPhone Pro Max, Galaxy Note</div>
+            </div>
+            
+            <div class="device-card">
+                <div class="icon">📊</div>
+                <h4>Tablets</h4>
+                <p>768px - 1024px</p>
+                <div class="code">iPad, Android Tablets</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🔧 Testing Tools</h3>
+            
+            <h4>🌐 Browser DevTools:</h4>
+            <ol class="test-steps">
+                <li>Ανοίξτε την εφαρμογή στο Chrome/Firefox</li>
+                <li>Πατήστε F12 για DevTools</li>
+                <li>Κάντε κλικ στο Device Toolbar icon (📱)</li>
+                <li>Δοκιμάστε διάφορες αναλύσεις:</li>
+            </ol>
+            
+            <div class="code">
+                • iPhone SE (375x667)<br>
+                • iPhone 12 Pro (390x844)<br>
+                • Samsung Galaxy S21 (360x800)<br>
+                • iPad (768x1024)<br>
+                • Custom: 320x568 (μικρότερη οθόνη)
+            </div>
+            
+            <h4>📱 Real Device Testing:</h4>
+            <ul class="checklist">
+                <li>Ανοίξτε σε πραγματικό κινητό/tablet</li>
+                <li>Δοκιμάστε σε WiFi και mobile data</li>
+                <li>Ελέγξτε σε διαφορετικά browsers</li>
+                <li>Δοκιμάστε landscape/portrait orientation</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>✅ Mobile Functionality Checklist</h3>
+            
+            <h4>🎨 Visual & Layout:</h4>
+            <ul class="checklist">
+                <li>Το timer είναι ευκρινές και μεγάλο</li>
+                <li>Τα κουμπιά έχουν κατάλληλο μέγεθος (44px+)</li>
+                <li>Το text είναι ευανάγνωστο</li>
+                <li>Δεν υπάρχει horizontal scrolling</li>
+                <li>Τα inputs είναι εύκολα προσβάσιμα</li>
+                <li>Η εφαρμογή χωράει σε μικρές οθόνες</li>
+            </ul>
+            
+            <h4>👆 Touch Interactions:</h4>
+            <ul class="checklist">
+                <li>Όλα τα κουμπιά ανταποκρίνονται στο tap</li>
+                <li>Δεν υπάρχει accidental zoom στα inputs</li>
+                <li>Τα κουμπιά έχουν visual feedback</li>
+                <li>Δεν υπάρχει delay στο tap</li>
+                <li>Haptic feedback λειτουργεί (αν υποστηρίζεται)</li>
+            </ul>
+            
+            <h4>🔄 Responsive Behavior:</h4>
+            <ul class="checklist">
+                <li>Λειτουργεί σε portrait mode</li>
+                <li>Λειτουργεί σε landscape mode</li>
+                <li>Ο timer ανα-προσαρμόζεται στο screen size</li>
+                <li>Τα κουμπιά παραμένουν accessible</li>
+                <li>Το content δεν "σπάει" στις γωνίες</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>⚡ Performance Testing</h3>
+            
+            <h4>🎯 Lighthouse Test:</h4>
+            <ol class="test-steps">
+                <li>Ανοίξτε Chrome DevTools</li>
+                <li>Πηγαίνετε στο "Lighthouse" tab</li>
+                <li>Επιλέξτε "Mobile" device</li>
+                <li>Κάντε κλικ "Generate report"</li>
+            </ol>
+            
+            <div class="warning">
+                <strong>⚠️ Target Scores:</strong>
+                <ul>
+                    <li>Performance: 90+ </li>
+                    <li>Accessibility: 95+</li>
+                    <li>Best Practices: 90+</li>
+                    <li>PWA: 90+</li>
+                </ul>
+            </div>
+            
+            <h4>📊 Loading Speed:</h4>
+            <ul class="checklist">
+                <li>Εφαρμογή φορτώνει σε <3 δευτερόλεπτα</li>
+                <li>Timer είναι αμέσως ορατό</li>
+                <li>Δεν υπάρχει layout shift</li>
+                <li>Icons/fonts φορτώνουν γρήγορα</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>📱 PWA Features Testing</h3>
+            
+            <h4>🏠 Add to Home Screen:</h4>
+            <ol class="test-steps">
+                <li>Ανοίξτε την εφαρμογή σε mobile browser</li>
+                <li>Αναζητήστε "Add to Home Screen" option</li>
+                <li>Επιλέξτε και προσθέστε</li>
+                <li>Ελέγξτε ότι το icon εμφανίζεται</li>
+                <li>Ανοίξτε από το home screen</li>
+                <li>Επιβεβαιώστε ότι τρέχει σε standalone mode</li>
+            </ol>
+            
+            <h4>🔔 Notifications:</h4>
+            <ul class="checklist">
+                <li>Browser ζητάει permission για notifications</li>
+                <li>Timer completion παίζει ήχο</li>
+                <li>Notification εμφανίζεται (αν υποστηρίζεται)</li>
+                <li>Vibration λειτουργεί (Android)</li>
+            </ul>
+            
+            <h4>💾 Offline Functionality:</h4>
+            <ul class="checklist">
+                <li>Service Worker εγκαθίσταται</li>
+                <li>Εφαρμογή λειτουργεί χωρίς internet</li>
+                <li>Data persist όταν κλείνετε τη σελίδα</li>
+                <li>Settings αποθηκεύονται local</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h3>🌐 Cross-Browser Testing</h3>
+            
+            <div class="device-grid">
+                <div class="device-card">
+                    <div class="emoji">🍎</div>
+                    <h4>iOS Safari</h4>
+                    <ul style="text-align: left; font-size: 14px;">
+                        <li>Add to Home Screen</li>
+                        <li>Standalone mode</li>
+                        <li>Input zoom prevention</li>
+                        <li>Status bar handling</li>
+                    </ul>
+                </div>
+                
+                <div class="device-card">
+                    <div class="emoji">🤖</div>
+                    <h4>Chrome Mobile</h4>
+                    <ul style="text-align: left; font-size: 14px;">
+                        <li>PWA installation</li>
+                        <li>Touch events</li>
+                        <li>Performance</li>
+                        <li>Notifications</li>
+                    </ul>
+                </div>
+                
+                <div class="device-card">
+                    <div class="emoji">🔥</div>
+                    <h4>Firefox Mobile</h4>
+                    <ul style="text-align: left; font-size: 14px;">
+                        <li>Touch compatibility</li>
+                        <li>CSS support</li>
+                        <li>JavaScript features</li>
+                        <li>Add to homescreen</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🐛 Common Issues & Solutions</h3>
+            
+            <h4>❌ Problem: Buttons too small on mobile</h4>
+            <div class="code">✅ Solution: min-height: 44px (iOS), min-width: 44px</div>
+            
+            <h4>❌ Problem: Text too small to read</h4>
+            <div class="code">✅ Solution: font-size >= 16px, clamp() for responsive text</div>
+            
+            <h4>❌ Problem: Zoom on input focus (iOS)</h4>
+            <div class="code">✅ Solution: font-size: 16px στα inputs, viewport meta tag</div>
+            
+            <h4>❌ Problem: App doesn't work offline</h4>
+            <div class="code">✅ Solution: Service Worker registration, cache strategy</div>
+            
+            <h4>❌ Problem: Timer not visible in landscape</h4>
+            <div class="code">✅ Solution: @media (orientation: landscape) queries</div>
+            
+            <h4>❌ Problem: Poor performance on low-end devices</h4>
+            <div class="code">✅ Solution: CSS optimization, reduce animations, lazy loading</div>
+        </div>
+
+        <div class="section">
+            <h3>🧪 Quick Test Sequence</h3>
+            
+            <ol class="test-steps">
+                <li><strong>Visual Test:</strong> Ανοίξτε σε κινητό → ελέγξτε layout</li>
+                <li><strong>Touch Test:</strong> Tap όλα τα κουμπιά → επιβεβαιώστε response</li>
+                <li><strong>Timer Test:</strong> Ξεκινήστε timer → ελέγξτε countdown</li>
+                <li><strong>Rotation Test:</strong> Περιστρέψτε συσκευή → ελέγξτε responsive</li>
+                <li><strong>Input Test:</strong> Προσθέστε task → ελέγξτε functionality</li>
+                <li><strong>PWA Test:</strong> Add to home screen → ανοίξτε από εκεί</li>
+                <li><strong>Notification Test:</strong> Αφήστε timer να τελειώσει</li>
+                <li><strong>Offline Test:</strong> Απενεργοποιήστε internet → δοκιμάστε app</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>🎉 Success Criteria</h3>
+            <p>Η εφαρμογή περνάει το mobile test όταν:</p>
+            <ul>
+                <li>✅ Λειτουργεί σε όλες τις δημοφιλείς mobile συσκευές</li>
+                <li>✅ Όλα τα elements είναι touch-friendly</li>
+                <li>✅ PWA features λειτουργούν σωστά</li>
+                <li>✅ Performance score >90 στο Lighthouse</li>
+                <li>✅ Εργάζεται σε διαφορετικά browsers</li>
+                <li>✅ Offline functionality διαθέσιμη</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <h3>🚀 Ready for Mobile?</h3>
+            <p>Η Promodoro εφαρμογή σας είναι τώρα mobile-optimized!</p>
+            <a href="index-simple.html" class="button">🧪 Test Now</a>
+            <a href="github-guide.html" class="button">📦 Deploy to GitHub</a>
+        </div>
+    </div>
+</body>
+</html> 
