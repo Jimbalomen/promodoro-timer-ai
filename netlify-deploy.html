@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 APK Generator - Promodoro App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .step {
+            background: rgba(255,255,255,0.1);
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 5px solid #4CAF50;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+        .button {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        .button.primary {
+            background: #FF9800;
+            font-size: 1.2em;
+            padding: 15px 30px;
+        }
+        .button.primary:hover {
+            background: #F57C00;
+        }
+        .warning {
+            background: rgba(255,193,7,0.2);
+            border-left: 5px solid #FFC107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: rgba(76,175,80,0.2);
+            border-left: 5px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 Promodoro APK Generator</h1>
+        
+        <div class="success">
+            <h3>🎉 Η εφαρμογή σας είναι έτοιμη για APK!</h3>
+            <p>Ακολουθήστε τα παρακάτω βήματα για να δημιουργήσετε το APK αρχείο</p>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="icon">🌐</div>
+                <h3>Hosting</h3>
+                <p>Upload στο διαδίκτυο</p>
+                <a href="https://app.netlify.com/drop" class="button" target="_blank">Netlify Drop</a>
+                <a href="https://vercel.com/new" class="button" target="_blank">Vercel</a>
+            </div>
+            
+            <div class="card">
+                <div class="icon">📦</div>
+                <h3>APK Generation</h3>
+                <p>Μετατροπή σε APK</p>
+                <a href="https://pwa2apk.com/" class="button primary" target="_blank">PWA2APK</a>
+                <a href="https://www.pwabuilder.com/" class="button" target="_blank">PWABuilder</a>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📤 Βήμα 1: Upload Files</h3>
+            <p><strong>Πιο εύκολος τρόπος - Netlify Drop:</strong></p>
+            <ol>
+                <li>Επιλέξτε όλα τα αρχεία του project</li>
+                <li>Πηγαίνετε στο <a href="https://app.netlify.com/drop" target="_blank" class="button">Netlify Drop</a></li>
+                <li>Drag & Drop όλα τα αρχεία</li>
+                <li>Θα πάρετε URL: <code>https://random-name.netlify.app</code></li>
+            </ol>
+            
+            <div class="warning">
+                <strong>⚠️ Σημαντικό:</strong> Βεβαιωθείτε ότι το αρχείο <code>index-simple.html</code> είναι στο root folder!
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📦 Βήμα 2: Generate APK</h3>
+            <p><strong>Με PWA2APK (Προτεινόμενο):</strong></p>
+            <ol>
+                <li>Πηγαίνετε στο <a href="https://pwa2apk.com/" target="_blank" class="button primary">PWA2APK</a></li>
+                <li>Paste το Netlify URL που πήρατε</li>
+                <li>App Name: <code>Promodoro Timer</code></li>
+                <li>Package Name: <code>com.yourname.promodoro</code></li>
+                <li>Κάντε κλικ <strong>"Generate APK"</strong></li>
+                <li>Download το APK! 🎉</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>📱 Βήμα 3: Install στο Android</h3>
+            <ol>
+                <li><strong>Ενεργοποιήστε Unknown Sources:</strong>
+                    <div class="code">Settings → Security → Install unknown apps → Chrome → Allow</div>
+                </li>
+                <li>Download το APK στο κινητό</li>
+                <li>Tap στο αρχείο → Install</li>
+                <li>Έτοιμο! 🎉</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <h3>🔧 Alternative - PWABuilder</h3>
+            <p>Αν το PWA2APK δεν δουλεύει:</p>
+            <ol>
+                <li>Πηγαίνετε στο <a href="https://www.pwabuilder.com/" target="_blank" class="button">PWABuilder</a></li>
+                <li>Paste το URL σας</li>
+                <li>Κάντε κλικ "Build My PWA"</li>
+                <li>Επιλέξτε Android → Generate Package</li>
+                <li>Download το APK bundle</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>🎯 Quick Tips:</h3>
+            <ul>
+                <li><strong>PWA Installation:</strong> Μπορείτε επίσης να προσθέσετε την εφαρμογή στην αρχική οθόνη απευθείας από το Chrome (Add to Home Screen)</li>
+                <li><strong>Auto-updates:</strong> Το PWA ενημερώνεται αυτόματα, το APK χρειάζεται manual update</li>
+                <li><strong>File size:</strong> PWA είναι πιο γρήγορο, APK είναι πιο "native" feeling</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <h3>🆘 Χρειάζεστε βοήθεια?</h3>
+            <p>Αν αντιμετωπίζετε πρόβλημα, δοκιμάστε:</p>
+            <a href="#" onclick="alert('Στείλτε email με το error message!')" class="button">Στείλτε Email</a>
+            <a href="deploy.md" class="button">Διαβάστε το Guide</a>
+        </div>
+    </div>
+
+    <script>
+        // Copy to clipboard functionality
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+        
+        // Auto-detect if running locally
+        if (window.location.protocol === 'file:' || window.location.hostname === 'localhost') {
+            document.body.style.background = 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%)';
+            
+            const warning = document.createElement('div');
+            warning.className = 'warning';
+            warning.innerHTML = `
+                <h3>🌐 Local Development Detected</h3>
+                <p>Τρέχετε την εφαρμογή τοπικά. Για APK generation χρειάζεστε hosting!</p>
+                <button onclick="copyToClipboard('python -m http.server 8000')" class="button">Copy Server Command</button>
+            `;
+            document.querySelector('.container').insertBefore(warning, document.querySelector('.grid'));
+        }
+    </script>
+</body>
+</html> 

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 GitHub Deployment Guide - Promodoro</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #24292e 0%, #0366d6 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .step {
+            background: rgba(255,255,255,0.1);
+            margin: 30px 0;
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 5px solid #28a745;
+        }
+        .step h3 {
+            margin-top: 0;
+            color: #28a745;
+            font-size: 1.5em;
+        }
+        .button {
+            display: inline-block;
+            background: #0366d6;
+            color: white;
+            padding: 12px 25px;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 10px 10px 10px 0;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #0256cc;
+            transform: translateY(-2px);
+        }
+        .button.primary {
+            background: #28a745;
+            font-size: 1.2em;
+            padding: 15px 30px;
+        }
+        .button.primary:hover {
+            background: #218838;
+        }
+        .warning {
+            background: rgba(255,193,7,0.2);
+            border-left: 5px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: rgba(40,167,69,0.2);
+            border-left: 5px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .code {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 15px 0;
+            border: 1px solid #444;
+        }
+        .screenshot {
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            border: 2px dashed #0366d6;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #ccc;
+            margin-bottom: 30px;
+        }
+        ol {
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+        ol li {
+            margin-bottom: 10px;
+        }
+        .highlight {
+            background: rgba(255,215,0,0.3);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 GitHub Pages Deployment</h1>
+        <p class="subtitle">Δημιουργήστε δωρεάν hosting για την Promodoro εφαρμογή σας</p>
+        
+        <div class="success">
+            <h3>🎯 Τι θα πετύχουμε:</h3>
+            <ul>
+                <li>✅ Δωρεάν hosting στο GitHub Pages</li>
+                <li>✅ Επαγγελματικό URL: <code>https://username.github.io/promodoro-timer</code></li>
+                <li>✅ HTTPS by default (απαραίτητο για PWA/APK)</li>
+                <li>✅ Εύκολες ενημερώσεις</li>
+                <li>✅ Version control</li>
+            </ul>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="icon">🌐</div>
+                <h3>GitHub Account</h3>
+                <p>Δωρεάν εγγραφή</p>
+                <a href="https://github.com/signup" class="button primary" target="_blank">Sign Up</a>
+            </div>
+            
+            <div class="card">
+                <div class="icon">📦</div>
+                <h3>Repository</h3>
+                <p>Δημιουργία project</p>
+                <a href="https://github.com/new" class="button" target="_blank">New Repo</a>
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📝 Βήμα 1: Δημιουργία Repository</h3>
+            <ol>
+                <li>Πηγαίνετε στο <a href="https://github.com/new" target="_blank" class="button">GitHub.com/new</a></li>
+                <li><strong>Repository name:</strong> <span class="highlight">promodoro-timer</span></li>
+                <li><strong>Visibility:</strong> <span class="highlight">Public</span> ✅ (απαραίτητο για GitHub Pages)</li>
+                <li><strong>Initialize:</strong> Αφήστε όλα unchecked</li>
+                <li>Κάντε κλικ <strong>"Create repository"</strong></li>
+            </ol>
+            
+            <div class="screenshot">
+                📷 Screenshot: Η σελίδα δημιουργίας repository θα δείχνει τα fields που χρειάζεται να συμπληρώσετε
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📤 Βήμα 2: Upload Αρχεία</h3>
+            
+            <div class="warning">
+                <strong>⚠️ Σημαντικό:</strong> Βεβαιωθείτε ότι έχετε όλα τα αρχεία στον φάκελο σας!
+            </div>
+            
+            <h4>🖱️ Μέθοδος A: Drag & Drop (Εύκολο)</h4>
+            <ol>
+                <li>Στο νέο repository, κάντε κλικ <strong>"uploading an existing file"</strong></li>
+                <li><strong>Επιλέξτε όλα τα αρχεία</strong> από τον φάκελο "promodoro app"</li>
+                <li><strong>Drag & Drop</strong> στο browser</li>
+                <li><strong>Commit message:</strong> "🍅 Initial Promodoro Timer upload"</li>
+                <li>Κάντε κλικ <strong>"Commit changes"</strong></li>
+            </ol>
+
+            <h4>💻 Μέθοδος B: Git Command Line</h4>
+            <p>Κάντε διπλό κλικ στο <code>github-deploy.bat</code> αρχείο!</p>
+            
+            <div class="screenshot">
+                📷 Screenshot: Η σελίδα upload θα δείχνει drag & drop area για τα αρχεία
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>🌐 Βήμα 3: Ενεργοποίηση GitHub Pages</h3>
+            <ol>
+                <li>Στο repository σας → <strong>Settings</strong> tab (πάνω δεξιά)</li>
+                <li>Scroll down στο αριστερό menu → <strong>"Pages"</strong></li>
+                <li><strong>Source:</strong> Deploy from a branch</li>
+                <li><strong>Branch:</strong> <span class="highlight">main</span> ✅</li>
+                <li><strong>Folder:</strong> <span class="highlight">/ (root)</span> ✅</li>
+                <li>Κάντε κλικ <strong>"Save"</strong></li>
+            </ol>
+            
+            <div class="success">
+                <h4>🎉 Success! Θα δείτε μήνυμα:</h4>
+                <div class="code">
+                    ✅ Your site is published at:<br>
+                    <strong>https://yourusername.github.io/promodoro-timer</strong>
+                </div>
+            </div>
+            
+            <div class="warning">
+                <strong>⏱️ Περίμενε:</strong> Χρειάζονται 2-5 λεπτά για να ενεργοποιηθεί το site!
+            </div>
+        </div>
+
+        <div class="step">
+            <h3>📱 Βήμα 4: Δημιουργία APK</h3>
+            
+            <h4>🔗 Πάρτε το URL σας:</h4>
+            <div class="code">
+                https://yourusername.github.io/promodoro-timer
+            </div>
+            
+            <h4>📦 Generate APK:</h4>
+            <ol>
+                <li>Πηγαίνετε στο <a href="https://pwa2apk.com/" target="_blank" class="button primary">PWA2APK.com</a></li>
+                <li><strong>PWA URL:</strong> Paste το GitHub Pages URL σας</li>
+                <li><strong>App Name:</strong> <code>Promodoro Timer</code></li>
+                <li><strong>Package Name:</strong> <code>com.yourusername.promodoro</code></li>
+                <li><strong>App Version:</strong> <code>1.0.0</code></li>
+                <li>Κάντε κλικ <strong>"Generate APK"</strong></li>
+                <li><strong>Download το APK!</strong> 🎉</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h3>📱 Βήμα 5: Εγκατάσταση στο Android</h3>
+            <ol>
+                <li><strong>Enable Unknown Sources:</strong>
+                    <div class="code">Settings → Security → Install unknown apps → Chrome → Allow</div>
+                </li>
+                <li><strong>Download APK</strong> στο κινητό (email, cloud, USB)</li>
+                <li><strong>Tap στο APK αρχείο</strong> → Install</li>
+                <li><strong>Έτοιμο!</strong> 🎉 Η εφαρμογή θα εμφανιστεί στην αρχική οθόνη</li>
+            </ol>
+        </div>
+
+        <div class="success">
+            <h3>🎯 Advanced Tips:</h3>
+            <ul>
+                <li><strong>Updates:</strong> Αλλάξτε αρχεία → Commit → APK auto-updates!</li>
+                <li><strong>Custom Domain:</strong> Μπορείτε να προσθέσετε δικό σας domain</li>
+                <li><strong>Analytics:</strong> Προσθέστε Google Analytics</li>
+                <li><strong>PWA Direct:</strong> Χρήστες μπορούν να κάνουν "Add to Home Screen" απευθείας από το browser</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>🆘 Troubleshooting:</h3>
+            <ul>
+                <li><strong>404 Error:</strong> Ελέγξτε ότι το <code>index-simple.html</code> είναι στο root</li>
+                <li><strong>PWA2APK Error:</strong> Δοκιμάστε <a href="https://www.pwabuilder.com/" target="_blank">PWABuilder</a></li>
+                <li><strong>APK δεν εγκαθίσταται:</strong> Ενεργοποιήστε "Install unknown apps"</li>
+                <li><strong>Site δεν φορτώνει:</strong> Περιμένετε 5-10 λεπτά για GitHub Pages activation</li>
+            </ul>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px;">
+            <h3>🎉 Congratulations!</h3>
+            <p>Η Promodoro εφαρμογή σας είναι τώρα διαθέσιμη online και σαν APK!</p>
+            <a href="https://github.com/new" class="button primary" target="_blank">🚀 Ξεκινήστε τώρα</a>
+        </div>
+    </div>
+</body>
+</html> 

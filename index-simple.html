@@ -1,0 +1,224 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A customizable Promodoro timer application for improved productivity and time management">
+    <meta name="theme-color" content="#d95550">
+    <title>Promodoro App</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png">
+    <!-- PWA και Sync functionality -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress" id="progress"></div>
+        </div>
+
+        <div class="mode-buttons">
+            <button data-mode="promodoro" class="active">Promodoro</button>
+            <button data-mode="shortBreak">Short Break</button>
+            <button data-mode="longBreak">Long Break</button>
+        </div>
+        
+        <div class="timer">
+            <span id="minutes">25</span>:<span id="seconds">00</span>
+        </div>
+        
+        <button id="timer-control" data-action="start">Start</button>
+        
+        <div class="task-container">
+            <h3>Current Task</h3>
+            <input type="text" id="task-input" placeholder="What are you working on?">
+            <ul id="task-list"></ul>
+        </div>
+        
+        <div class="stats">
+            <span>Completed sessions: <span id="promodoro-count">0</span></span>
+        </div>
+        
+        <div class="help-button">?</div>
+    </div>
+    
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Promodoro Technique</h2>
+            <p>The Pomodoro Technique is a time management method developed by Francesco Cirillo that uses a timer to break work into intervals, typically 25 minutes in length, separated by short breaks.</p>
+            
+            <h3>How to use this app:</h3>
+            <ol>
+                <li>Set your task in the input field</li>
+                <li>Start the timer and focus on your task until the timer ends</li>
+                <li>Take a short break when the timer rings</li>
+                <li>After 4 work sessions, take a longer break</li>
+            </ol>
+            
+            <h3>Tips:</h3>
+            <ul>
+                <li>Remove distractions during work sessions</li>
+                <li>Use breaks to rest, not to check email or social media</li>
+                <li>Customize timers in settings to match your focus ability</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Regular script tag instead of module -->
+    <script src="app-simple.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+        
+        // Initialize modal functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            const helpButton = document.querySelector('.help-button');
+            const helpModal = document.getElementById('help-modal');
+            const closeModal = document.querySelector('.close-modal');
+            
+            if (helpButton && helpModal && closeModal) {
+                helpButton.addEventListener('click', () => {
+                    helpModal.style.display = 'block';
+                });
+                
+                closeModal.addEventListener('click', () => {
+                    helpModal.style.display = 'none';
+                });
+                
+                window.addEventListener('click', (event) => {
+                    if (event.target === helpModal) {
+                        helpModal.style.display = 'none';
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <style>
+        .help-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 100;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 600px;
+            color: #333;
+            position: relative;
+        }
+        
+        .close-modal {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close-modal:hover {
+            color: black;
+        }
+        
+        .modal-content h2 {
+            margin-top: 0;
+            color: #d95550;
+        }
+        
+        .modal-content h3 {
+            color: #555;
+        }
+        
+        .modal-content ul, .modal-content ol {
+            padding-left: 20px;
+        }
+        
+        .modal-content li {
+            margin-bottom: 5px;
+        }
+        
+        .sync-section {
+            margin-top: 20px;
+            padding: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .sync-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .sync-button {
+            padding: 8px 12px;
+            background: #4c9195;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .sync-button:hover {
+            background: #457ca3;
+        }
+        .qr-container {
+            text-align: center;
+            margin: 15px 0;
+        }
+        #qr-code {
+            margin: 10px auto;
+        }
+        .install-prompt {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            color: #1976d2;
+            display: none;
+        }
+    </style>
+</body>
+</html> 
