@@ -1,6 +1,6 @@
 // Service Worker for Promodoro App
 
-const CACHE_NAME = 'promodoro-app-v5';
+const CACHE_NAME = 'promodoro-app-v6';
 const urlsToCache = [
   './',
   './index.html',

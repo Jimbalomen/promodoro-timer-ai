@@ -1,7 +1,8 @@
 {
   "name": "Promodoro Timer",
   "short_name": "Promodoro",
-  "description": "A customizable Promodoro timer for productivity",
+  "description": "A customizable Promodoro timer with QR scanner for productivity",
+  "version": "2.0.0",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
