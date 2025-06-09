@@ -478,8 +478,24 @@ class TimerModel {
             }
             
             // Handle compact versions from QR codes
-            if (data.version === '1.0-compact' || data.version === '1.0-settings-only') {
+            if (data.version === '1.0-compact' || data.version === '1.0-settings-only' || data.v === '1.0-min') {
                 console.log('Importing compact data from QR code');
+                
+                // Handle minimal format
+                if (data.v === '1.0-min') {
+                    if (data.modes) {
+                        this.modes = data.modes;
+                    }
+                    if (typeof data.count !== 'undefined') {
+                        this.promodoroCount = data.count;
+                    }
+                    
+                    // Save settings
+                    this.saveSettings();
+                    this.timeRemaining = this.modes[this.currentMode];
+                    this.notifyListeners();
+                    return true;
+                }
             }
             
             // Import settings
@@ -730,7 +746,8 @@ class TimerView {
                                 <label>Transfer your data between devices:</label>
                                 <div class="sync-buttons">
                                     <button type="button" id="export-data-btn" class="sync-btn export-btn">📤 Export Data</button>
-                                    <button type="button" id="import-data-btn" class="sync-btn import-btn">📥 Import Data</button>
+                                    <button type="button" id="import-file-btn" class="sync-btn import-btn">📁 Import File</button>
+                                    <button type="button" id="import-paste-btn" class="sync-btn paste-btn">📋 Paste Data</button>
                                     <button type="button" id="generate-qr-btn" class="sync-btn qr-btn">📱 Share via QR</button>
                                 </div>
                                 <input type="file" id="import-file" accept=".json" style="display: none;">
@@ -910,19 +927,21 @@ class TimerView {
                     }
                     .sync-buttons {
                         display: flex;
-                        gap: 10px;
+                        gap: 8px;
                         flex-wrap: wrap;
+                        margin-bottom: 10px;
                     }
                     .sync-btn {
-                        padding: 8px 16px;
+                        padding: 8px 12px;
                         border: none;
                         border-radius: 6px;
                         cursor: pointer;
-                        font-size: 14px;
+                        font-size: 13px;
                         font-weight: 500;
                         transition: all 0.2s ease;
                         flex: 1;
-                        min-width: 120px;
+                        min-width: 100px;
+                        text-align: center;
                     }
                     .export-btn {
                         background: #4CAF50;
@@ -937,6 +956,13 @@ class TimerView {
                     }
                     .import-btn:hover {
                         background: #1976D2;
+                    }
+                    .paste-btn {
+                        background: #9C27B0;
+                        color: white;
+                    }
+                    .paste-btn:hover {
+                        background: #7B1FA2;
                     }
                     .qr-btn {
                         background: #FF9800;
@@ -1330,23 +1356,11 @@ class TimerView {
             exportBtn.addEventListener('click', exportData);
         }
         
-        // Import data button and file input
-        const importBtn = document.getElementById('import-data-btn');
+        // Import file button
+        const importFileBtn = document.getElementById('import-file-btn');
         const importFile = document.getElementById('import-file');
-        if (importBtn && importFile) {
-            importBtn.addEventListener('click', () => {
-                // Also show option to paste data directly
-                const pasteData = prompt('📥 You can either:\n1. Click OK to select a file, or\n2. Paste your data here directly:');
-                if (pasteData && pasteData.trim()) {
-                    try {
-                        const data = JSON.parse(pasteData);
-                        importData({ target: { result: JSON.stringify(data) } });
-                        return;
-                    } catch (error) {
-                        this.showSyncStatus('❌ Invalid JSON data pasted', 'error');
-                        return;
-                    }
-                }
+        if (importFileBtn && importFile) {
+            importFileBtn.addEventListener('click', () => {
                 importFile.click();
             });
             
@@ -1359,6 +1373,27 @@ class TimerView {
                 }
                 // Reset file input
                 importFile.value = '';
+            });
+        }
+        
+        // Import paste button
+        const importPasteBtn = document.getElementById('import-paste-btn');
+        if (importPasteBtn) {
+            importPasteBtn.addEventListener('click', () => {
+                const pasteData = prompt('📋 Paste your exported JSON data here:\n\n(Click Cancel if you prefer to use a file instead)');
+                if (pasteData === null) {
+                    // User clicked Cancel - do nothing
+                    return;
+                } else if (pasteData.trim() === '') {
+                    this.showSyncStatus('⚠️ No data entered. Please paste your JSON data.', 'info');
+                } else {
+                    try {
+                        const data = JSON.parse(pasteData);
+                        importData({ target: { result: JSON.stringify(data) } });
+                    } catch (error) {
+                        this.showSyncStatus('❌ Invalid JSON data. Please check your data format.', 'error');
+                    }
+                }
             });
         }
         
@@ -1462,17 +1497,33 @@ class TimerView {
             const dataStr = JSON.stringify(compactData);
             
             // Check if data is still too large for QR code
-            if (dataStr.length > 2000) {
+            if (dataStr.length > 1500) { // Reduced threshold for better QR readability
                 // If still too large, offer only settings
                 const settingsOnly = {
-                    settings: compactData.settings,
+                    settings: {
+                        modes: compactData.settings.modes,
+                        promodoroCount: compactData.settings.promodoroCount
+                    },
                     version: '1.0-settings-only'
                 };
                 const settingsStr = JSON.stringify(settingsOnly);
                 
-                if (settingsStr.length > 2000) {
-                    this.showSyncStatus('⚠️ Data too large for QR code. Use Export/Import instead.', 'info');
-                    return;
+                if (settingsStr.length > 1500) {
+                    // Create ultra-minimal data for QR
+                    const minimalData = {
+                        modes: this.model.modes,
+                        count: this.model.promodoroCount,
+                        v: '1.0-min'
+                    };
+                    const minimalStr = JSON.stringify(minimalData);
+                    
+                    if (minimalStr.length > 1500) {
+                        this.showSyncStatus('⚠️ Data too large for QR code. Use Export/Import instead.', 'info');
+                        return;
+                    } else {
+                        this.generateQR(minimalStr, qrContainer, qrCodeDiv, 'Basic settings only (minimal data)');
+                        return;
+                    }
                 } else {
                     this.generateQR(settingsStr, qrContainer, qrCodeDiv, 'Settings only (tasks excluded due to size)');
                     return;
@@ -1495,14 +1546,26 @@ class TimerView {
         if (this.tryQRLibrary(dataStr, qrCodeDiv, description)) {
             qrContainer.style.display = 'block';
             this.showSyncStatus(`✅ QR code generated! ${description}`, 'success');
-        } else if (this.tryOnlineQR(dataStr, qrCodeDiv, description)) {
-            qrContainer.style.display = 'block';
-            this.showSyncStatus(`✅ QR code generated online! ${description}`, 'success');
         } else {
-            // Ultimate fallback: Enhanced text display with copy functionality
-            this.createTextFallback(dataStr, qrCodeDiv, description);
+            // Show loading message while trying online services
+            qrCodeDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">🔄 Generating QR code...</div>';
             qrContainer.style.display = 'block';
-            this.showSyncStatus('📋 Showing data as text. Copy to transfer manually.', 'info');
+            this.showSyncStatus('🔄 Generating QR code...', 'info');
+            
+            // Try online QR services
+            this.tryOnlineQR(dataStr, qrCodeDiv, description).then(success => {
+                if (success) {
+                    this.showSyncStatus(`✅ QR code generated online! ${description}`, 'success');
+                } else {
+                    // Ultimate fallback: Enhanced text display with copy functionality
+                    this.createTextFallback(dataStr, qrCodeDiv, description);
+                    this.showSyncStatus('📋 QR services unavailable. Showing data as text.', 'info');
+                }
+            }).catch(error => {
+                console.error('QR generation error:', error);
+                this.createTextFallback(dataStr, qrCodeDiv, description);
+                this.showSyncStatus('📋 QR generation failed. Showing data as text.', 'info');
+            });
         }
     }
     
@@ -1529,34 +1592,106 @@ class TimerView {
     
     // Try online QR generator as fallback
     tryOnlineQR(dataStr, qrCodeDiv, description) {
-        try {
-            // Use Google Charts API for QR generation
-            const encodedData = encodeURIComponent(dataStr);
-            const size = dataStr.length > 1000 ? 150 : (dataStr.length > 500 ? 175 : 200);
-            const qrUrl = `https://chart.googleapis.com/chart?chs=${size}x${size}&cht=qr&chl=${encodedData}`;
-            
-            const img = document.createElement('img');
-            img.src = qrUrl;
-            img.alt = 'QR Code';
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            
-            // Test if the image loads
-            img.onload = () => {
-                qrCodeDiv.appendChild(img);
-            };
-            
-            img.onerror = () => {
-                console.log('Online QR generation failed');
-                return false;
-            };
-            
-            qrCodeDiv.appendChild(img);
-            return true;
-        } catch (error) {
-            console.log('Online QR generation failed:', error);
-        }
-        return false;
+        return new Promise((resolve) => {
+            try {
+                // Create container for multiple QR service attempts
+                const qrContainer = document.createElement('div');
+                let servicesAttempted = 0;
+                const totalServices = 3;
+                
+                // Service 1: Google Charts API
+                this.tryQRService(dataStr, qrContainer, 'https://chart.googleapis.com/chart', (size, encodedData) => 
+                    `https://chart.googleapis.com/chart?chs=${size}x${size}&cht=qr&chl=${encodedData}`
+                ).then(success => {
+                    servicesAttempted++;
+                    if (success) {
+                        qrCodeDiv.appendChild(qrContainer);
+                        resolve(true);
+                    } else if (servicesAttempted >= totalServices) {
+                        resolve(false);
+                    }
+                });
+                
+                // Service 2: QR-Server.com
+                setTimeout(() => {
+                    if (servicesAttempted < totalServices) {
+                        this.tryQRService(dataStr, qrContainer, 'https://api.qrserver.com/v1/create-qr-code/', (size, encodedData) => 
+                            `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodedData}`
+                        ).then(success => {
+                            servicesAttempted++;
+                            if (success) {
+                                qrCodeDiv.appendChild(qrContainer);
+                                resolve(true);
+                            } else if (servicesAttempted >= totalServices) {
+                                resolve(false);
+                            }
+                        });
+                    }
+                }, 1000);
+                
+                // Service 3: QRickit
+                setTimeout(() => {
+                    if (servicesAttempted < totalServices) {
+                        this.tryQRService(dataStr, qrContainer, 'https://qrickit.com/api/qr', (size, encodedData) => 
+                            `https://qrickit.com/api/qr?d=${encodedData}&addlogo=0&t=p&c=black&b=white&s=${size}`
+                        ).then(success => {
+                            servicesAttempted++;
+                            if (success) {
+                                qrCodeDiv.appendChild(qrContainer);
+                                resolve(true);
+                            } else {
+                                resolve(false);
+                            }
+                        });
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                console.log('Online QR generation failed:', error);
+                resolve(false);
+            }
+        });
+    }
+    
+    // Helper to try individual QR services
+    tryQRService(dataStr, container, serviceName, urlGenerator) {
+        return new Promise((resolve) => {
+            try {
+                const encodedData = encodeURIComponent(dataStr);
+                const size = dataStr.length > 1000 ? 150 : (dataStr.length > 500 ? 175 : 200);
+                const qrUrl = urlGenerator(size, encodedData);
+                
+                const img = document.createElement('img');
+                img.src = qrUrl;
+                img.alt = 'QR Code';
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.border = '1px solid #ddd';
+                img.style.borderRadius = '4px';
+                
+                let timeoutId = setTimeout(() => {
+                    resolve(false);
+                }, 5000); // 5 second timeout
+                
+                img.onload = () => {
+                    clearTimeout(timeoutId);
+                    container.innerHTML = ''; // Clear any previous attempts
+                    container.appendChild(img);
+                    console.log(`QR generated successfully with ${serviceName}`);
+                    resolve(true);
+                };
+                
+                img.onerror = () => {
+                    clearTimeout(timeoutId);
+                    console.log(`QR service ${serviceName} failed`);
+                    resolve(false);
+                };
+                
+            } catch (error) {
+                console.log(`QR service ${serviceName} error:`, error);
+                resolve(false);
+            }
+        });
     }
     
     // Enhanced text fallback with copy functionality
@@ -1574,19 +1709,30 @@ class TimerView {
             overflow-y: auto;
         `;
         
+        const shortData = dataStr.length > 200 ? dataStr.substring(0, 200) + '...' : dataStr;
+        
         fallbackDiv.innerHTML = `
             <div style="margin-bottom: 10px; font-weight: bold; color: #495057;">
                 📱 Manual Transfer Data (${description})
             </div>
-            <div style="background: white; padding: 10px; border-radius: 4px; word-break: break-all; margin-bottom: 10px; border: 1px solid #dee2e6;">
+            <div style="background: white; padding: 10px; border-radius: 4px; word-break: break-all; margin-bottom: 10px; border: 1px solid #dee2e6; font-size: 10px;">
+                ${shortData}
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                <button onclick="navigator.clipboard.writeText('${dataStr.replace(/'/g, "\\'")}').then(() => alert('✅ Data copied to clipboard!')).catch(() => alert('❌ Copy failed. Please select and copy manually.'))" 
+                        style="padding: 6px 10px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; flex: 1;">
+                    📋 Copy Data
+                </button>
+                <button onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'; this.textContent = this.textContent.includes('Show') ? '🙈 Hide Full Data' : '👀 Show Full Data';" 
+                        style="padding: 6px 10px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; flex: 1;">
+                    👀 Show Full Data
+                </button>
+            </div>
+            <div style="display: none; background: #f8f9fa; padding: 8px; border-radius: 4px; word-break: break-all; font-size: 9px; max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6;">
                 ${dataStr}
             </div>
-            <button onclick="navigator.clipboard.writeText('${dataStr.replace(/'/g, "\\'")}').then(() => alert('✅ Data copied to clipboard!')).catch(() => alert('❌ Copy failed. Please select and copy manually.'))" 
-                    style="padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;">
-                📋 Copy Data
-            </button>
             <small style="color: #6c757d; display: block; margin-top: 8px;">
-                💡 Tip: Copy this data and paste it into the Import field on your other device
+                💡 Tip: Copy this data and paste it using "📋 Paste Data" on your other device
             </small>
         `;
         
