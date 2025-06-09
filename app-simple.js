@@ -478,8 +478,63 @@ class TimerModel {
             }
             
             // Handle compact versions from QR codes
-            if (data.version === '1.0-compact' || data.version === '1.0-settings-only' || data.v === '1.0-min') {
+            if (data.version === '1.0-compact' || data.version === '1.0-compact-with-history' || data.version === '1.0-settings-only' || data.v === '1.0-min') {
                 console.log('Importing compact data from QR code');
+                
+                // Handle compact format with history
+                if (data.version === '1.0-compact-with-history') {
+                    // Import settings
+                    if (data.settings) {
+                        if (data.settings.modes) {
+                            this.modes = data.settings.modes;
+                        }
+                        if (typeof data.settings.promodoroCount !== 'undefined') {
+                            this.promodoroCount = data.settings.promodoroCount;
+                        }
+                    }
+                    
+                    // Import tasks with session history
+                    if (data.tasks && Array.isArray(data.tasks)) {
+                        const currentTasks = storage.loadTaskList();
+                        const importedTasks = data.tasks.map(task => ({
+                            ...task,
+                            id: Date.now() + Math.random() // Generate new IDs
+                        }));
+                        
+                        // Save tasks
+                        storage.saveTaskList(importedTasks);
+                        
+                        // Import session history for each task
+                        data.tasks.forEach((task, index) => {
+                            if (task.history && task.history.length > 0) {
+                                const newTaskId = importedTasks[index].id;
+                                // Store session history with new task ID
+                                const sessions = task.history.map(session => ({
+                                    ...session,
+                                    taskId: newTaskId
+                                }));
+                                
+                                // Add to global session history
+                                const currentHistory = storage.loadSessionHistory() || [];
+                                const updatedHistory = currentHistory.concat(sessions);
+                                storage.saveSessionHistory(updatedHistory);
+                                
+                                // Update task history as well
+                                const currentTaskHistory = storage.loadTaskHistory() || {};
+                                if (!currentTaskHistory[newTaskId]) {
+                                    currentTaskHistory[newTaskId] = [];
+                                }
+                                currentTaskHistory[newTaskId] = currentTaskHistory[newTaskId].concat(sessions);
+                                storage.saveTaskHistory(currentTaskHistory);
+                            }
+                        });
+                    }
+                    
+                    this.saveSettings();
+                    this.timeRemaining = this.modes[this.currentMode];
+                    this.notifyListeners();
+                    return true;
+                }
                 
                 // Handle minimal format
                 if (data.v === '1.0-min') {
@@ -1592,14 +1647,19 @@ class TimerView {
         if (!qrContainer || !qrCodeDiv) return;
         
         try {
-            // Create a smaller version of data for QR code (only essential settings)
+            // Create a smaller version of data for QR code (with session history)
             const compactData = {
                 settings: {
                     modes: this.model.modes,
                     promodoroCount: this.model.promodoroCount
                 },
-                tasks: storage.loadTaskList().map(task => ({ text: task.text, completed: task.completed })), // Remove IDs and extra data
-                version: '1.0-compact'
+                tasks: storage.loadTaskList().map(task => ({
+                    text: task.text,
+                    completed: task.completed,
+                    sessions: this.model.getTaskSessionCount(task.id) || 0,
+                    history: this.model.getTaskHistory(task.id) || []
+                })),
+                version: '1.0-compact-with-history'
             };
             
             const dataStr = JSON.stringify(compactData);
