@@ -539,6 +539,9 @@ class TimerModel {
                         // Save updated histories
                         storage.saveTaskHistory(currentTaskHistory);
                         storage.saveSessionHistory(currentSessionHistory);
+                        
+                        // Update instance variables with new data
+                        this.taskHistory = currentTaskHistory;
                         this.sessionHistory = currentSessionHistory;
                         
                         console.log('Final task history:', this.taskHistory);
@@ -1650,7 +1653,9 @@ class TimerView {
                     console.log(`Task "${task.text}" (ID: ${task.id}):`, {
                         sessionCount: sessionCount,
                         historyLength: taskHistory.length,
-                        history: taskHistory
+                        history: taskHistory,
+                        taskHistoryKeys: Object.keys(this.model.taskHistory),
+                        allTaskHistory: this.model.taskHistory
                     });
                     
                     return {
@@ -1664,6 +1669,8 @@ class TimerView {
             };
             
             console.log('QR Export Data:', compactData);
+            console.log('Available task history keys:', Object.keys(this.model.taskHistory));
+            console.log('Tasks being exported:', tasks.map(t => ({ id: t.id, text: t.text })));
             
             const dataStr = JSON.stringify(compactData);
             
