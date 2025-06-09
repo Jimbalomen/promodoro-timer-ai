@@ -20,7 +20,8 @@
     <link rel="apple-touch-startup-image" href="./icons/icon-512x512.png">
     
     <!-- PWA και Sync functionality -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js" 
+            onerror="console.log('QR library failed to load from CDN - will use fallback methods')"></script>
 </head>
 <body>
     <div class="container">
@@ -80,6 +81,14 @@
                 <li>Enable notifications for timer alerts</li>
                 <li>Use landscape mode on tablets for better viewing</li>
                 <li>Keep your phone in "Do Not Disturb" mode during work sessions</li>
+            </ul>
+            
+            <h3>🔄 Data Sync:</h3>
+            <ul>
+                <li><strong>Export Data:</strong> Download your tasks, settings, and history as a JSON file</li>
+                <li><strong>Import Data:</strong> Upload a previously exported JSON file to restore your data</li>
+                <li><strong>Share via QR:</strong> Generate a QR code to quickly transfer small amounts of data between devices</li>
+                <li>Perfect for switching between computer and mobile, or backing up your progress!</li>
             </ul>
         </div>
     </div>

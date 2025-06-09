@@ -31,6 +31,13 @@ const storage = {
         const saved = localStorage.getItem('promodoro-task-history');
         return saved ? JSON.parse(saved) : {};
     },
+    saveSessionHistory: function(sessions) {
+        localStorage.setItem('promodoro-session-history', JSON.stringify(sessions));
+    },
+    loadSessionHistory: function() {
+        const saved = localStorage.getItem('promodoro-session-history');
+        return saved ? JSON.parse(saved) : [];
+    },
     saveCustomSound: function(soundData) {
         localStorage.setItem('promodoro-custom-sound', JSON.stringify(soundData));
     },
@@ -77,6 +84,7 @@ class TimerModel {
         // Current task tracking
         this.currentTaskId = null;
         this.taskHistory = storage.loadTaskHistory() || {};
+        this.sessionHistory = storage.loadSessionHistory() || [];
         
         // Load saved settings if available
         this.loadSavedSettings();
@@ -275,17 +283,7 @@ class TimerModel {
     handleTimerComplete() {
         // Play notification sound if enabled
         if (this.alarmEnabled) {
-            const audio = new Audio(this.alarmSound);
-            audio.play().catch(err => {
-                console.error("Error playing sound:", err);
-                // Try a fallback notification
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('Timer Complete', {
-                        body: `${this.currentMode} session complete!`,
-                        icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="%23d95550"/></svg>'
-                    });
-                }
-            });
+            this.playAlarmSound();
         }
 
         // Record session for current task if this was a promodoro
@@ -335,33 +333,38 @@ class TimerModel {
 
     // Record a completed session for the current task
     recordTaskSession() {
+        const now = new Date();
+        const session = {
+            timestamp: now.getTime(),
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString(),
+            duration: this.modes[this.currentMode] / 60, // in minutes
+            mode: this.currentMode,
+            taskId: this.currentTaskId
+        };
+        
+        // Always record to global session history
+        this.sessionHistory.push(session);
+        storage.saveSessionHistory(this.sessionHistory);
+        
+        // If there's a current task, record to task-specific history too
         if (this.currentTaskId) {
-            const now = new Date();
-            const session = {
-                timestamp: now.getTime(),
-                date: now.toLocaleDateString(),
-                time: now.toLocaleTimeString(),
-                duration: this.modes[this.currentMode] / 60, // in minutes
-                mode: this.currentMode
-            };
-            
             // Initialize history array for this task if it doesn't exist
             if (!this.taskHistory[this.currentTaskId]) {
                 this.taskHistory[this.currentTaskId] = [];
             }
             
-            // Add the session to history
+            // Add the session to task history
             this.taskHistory[this.currentTaskId].push(session);
             
             // Save to storage
             storage.saveTaskHistory(this.taskHistory);
-            
-            // Notify listeners that task session was recorded (this will update the UI)
-            this.notifyListeners();
-            
-            return session;
         }
-        return null;
+        
+        // Notify listeners that task session was recorded (this will update the UI)
+        this.notifyListeners();
+        
+        return session;
     }
 
     // Get history for a specific task
@@ -372,6 +375,170 @@ class TimerModel {
     // Get session count for a specific task
     getTaskSessionCount(taskId) {
         return this.taskHistory[taskId] ? this.taskHistory[taskId].length : 0;
+    }
+    
+    // Improved sound playing with fallback for local files
+    playAlarmSound() {
+        try {
+            let audioUrl = this.alarmSound;
+            
+            // If it's a custom sound with base64 data, use it directly
+            if (this.customSoundUrl) {
+                audioUrl = this.customSoundUrl;
+            }
+            
+            const audio = new Audio(audioUrl);
+            
+            // For local file usage, add error handling with fallback
+            audio.addEventListener('error', (e) => {
+                console.log('Audio error:', e);
+                // Fallback to browser's default notification sound
+                this.playFallbackSound();
+            });
+            
+            audio.play().catch(e => {
+                console.log('Could not play audio, trying fallback:', e);
+                this.playFallbackSound();
+            });
+            
+        } catch (error) {
+            console.log('Audio creation failed, using fallback:', error);
+            this.playFallbackSound();
+        }
+    }
+    
+    // Fallback sound using Web Audio API or system notification
+    playFallbackSound() {
+        try {
+            // Try to create a simple beep using Web Audio API
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800; // Frequency in Hz
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+            
+            // Also show notification if available
+            this.showNotification();
+        } catch (error) {
+            console.log('Web Audio API not available:', error);
+            // Last resort: vibration and notification
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200, 100, 200]);
+            }
+            this.showNotification();
+        }
+    }
+    
+    // Show browser notification
+    showNotification() {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Timer Complete! 🍅', {
+                body: `${this.currentMode} session complete!`,
+                icon: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="%23d95550"/></svg>',
+                tag: 'promodoro-timer'
+            });
+        }
+    }
+    
+    // Export all app data
+    exportData() {
+        const data = {
+            settings: {
+                modes: this.modes,
+                alarmEnabled: this.alarmEnabled,
+                alarmSound: this.alarmSound,
+                autoStartNextSession: this.autoStartNextSession,
+                promodoroCount: this.promodoroCount
+            },
+            tasks: storage.loadTaskList(),
+            taskHistory: this.taskHistory,
+            sessionHistory: this.sessionHistory,
+            customSound: storage.loadCustomSound(),
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+        return data;
+    }
+    
+    // Import app data
+    importData(data) {
+        try {
+            if (!data || typeof data !== 'object') {
+                throw new Error('Invalid data format');
+            }
+            
+            // Handle compact versions from QR codes
+            if (data.version === '1.0-compact' || data.version === '1.0-settings-only') {
+                console.log('Importing compact data from QR code');
+            }
+            
+            // Import settings
+            if (data.settings) {
+                if (data.settings.modes) {
+                    this.modes = data.settings.modes;
+                }
+                if (typeof data.settings.alarmEnabled !== 'undefined') {
+                    this.alarmEnabled = data.settings.alarmEnabled;
+                }
+                if (data.settings.alarmSound) {
+                    this.alarmSound = data.settings.alarmSound;
+                }
+                if (typeof data.settings.autoStartNextSession !== 'undefined') {
+                    this.autoStartNextSession = data.settings.autoStartNextSession;
+                }
+                if (typeof data.settings.promodoroCount !== 'undefined') {
+                    this.promodoroCount = data.settings.promodoroCount;
+                }
+            }
+            
+            // Import tasks
+            if (data.tasks && Array.isArray(data.tasks)) {
+                storage.saveTaskList(data.tasks);
+            }
+            
+            // Import task history
+            if (data.taskHistory) {
+                this.taskHistory = data.taskHistory;
+                storage.saveTaskHistory(this.taskHistory);
+            }
+            
+            // Import session history
+            if (data.sessionHistory) {
+                this.sessionHistory = data.sessionHistory;
+                storage.saveSessionHistory(this.sessionHistory);
+            }
+            
+            // Import custom sound
+            if (data.customSound) {
+                storage.saveCustomSound(data.customSound);
+                this.customSoundName = data.customSound.name;
+                this.customSoundUrl = data.customSound.url;
+            }
+            
+            // Save all settings
+            this.saveSettings();
+            
+            // Reset current mode time
+            this.timeRemaining = this.modes[this.currentMode];
+            
+            // Notify listeners
+            this.notifyListeners();
+            
+            return true;
+        } catch (error) {
+            console.error('Import failed:', error);
+            return false;
+        }
     }
 }
 
@@ -556,6 +723,26 @@ class TimerView {
                             </div>
                         </div>
                     </div>
+                    <div class="settings-section">
+                        <h4>📱 Data Sync</h4>
+                        <div class="sync-settings">
+                            <div class="sync-setting">
+                                <label>Transfer your data between devices:</label>
+                                <div class="sync-buttons">
+                                    <button type="button" id="export-data-btn" class="sync-btn export-btn">📤 Export Data</button>
+                                    <button type="button" id="import-data-btn" class="sync-btn import-btn">📥 Import Data</button>
+                                    <button type="button" id="generate-qr-btn" class="sync-btn qr-btn">📱 Share via QR</button>
+                                </div>
+                                <input type="file" id="import-file" accept=".json" style="display: none;">
+                                <div id="qr-container" class="qr-container" style="display: none;">
+                                    <div id="qr-code"></div>
+                                    <p>Scan with your mobile device to transfer data</p>
+                                    <button type="button" onclick="document.getElementById('qr-container').style.display='none'">Close QR</button>
+                                </div>
+                                <div id="sync-status" class="sync-status"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="settings-footer">
                     <button id="save-settings">Save Settings</button>
@@ -710,6 +897,103 @@ class TimerView {
                     .container {
                         position: relative;
                         padding-top: 60px;
+                    }
+                    .sync-settings {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+                    .sync-setting {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 10px;
+                    }
+                    .sync-buttons {
+                        display: flex;
+                        gap: 10px;
+                        flex-wrap: wrap;
+                    }
+                    .sync-btn {
+                        padding: 8px 16px;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        transition: all 0.2s ease;
+                        flex: 1;
+                        min-width: 120px;
+                    }
+                    .export-btn {
+                        background: #4CAF50;
+                        color: white;
+                    }
+                    .export-btn:hover {
+                        background: #45a049;
+                    }
+                    .import-btn {
+                        background: #2196F3;
+                        color: white;
+                    }
+                    .import-btn:hover {
+                        background: #1976D2;
+                    }
+                    .qr-btn {
+                        background: #FF9800;
+                        color: white;
+                    }
+                    .qr-btn:hover {
+                        background: #F57C00;
+                    }
+                    .qr-container {
+                        text-align: center;
+                        padding: 20px;
+                        background: #f9f9f9;
+                        border-radius: 8px;
+                        margin-top: 15px;
+                        max-height: 400px;
+                        overflow-y: auto;
+                    }
+                    .qr-container p {
+                        margin: 10px 0 0 0;
+                        font-size: 12px;
+                        color: #666;
+                    }
+                    .qr-container button {
+                        margin-top: 10px;
+                        padding: 5px 10px;
+                        background: #FF9800;
+                        color: white;
+                        border: none;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 12px;
+                    }
+                    .sync-status {
+                        font-size: 12px;
+                        padding: 8px;
+                        border-radius: 4px;
+                        margin-top: 5px;
+                        text-align: center;
+                        display: none;
+                    }
+                    .sync-status.success {
+                        background: #d4edda;
+                        color: #155724;
+                        border: 1px solid #c3e6cb;
+                        display: block;
+                    }
+                    .sync-status.error {
+                        background: #f8d7da;
+                        color: #721c24;
+                        border: 1px solid #f5c6cb;
+                        display: block;
+                    }
+                    .sync-status.info {
+                        background: #d1ecf1;
+                        color: #0c5460;
+                        border: 1px solid #bee5eb;
+                        display: block;
                     }
                 `;
                 document.head.appendChild(styleEl);
@@ -927,6 +1211,9 @@ class TimerView {
         const customSoundDiv = document.getElementById('current-custom-sound');
         
         if (soundSelect && customSoundDiv) {
+            console.log('Current alarm sound:', model.alarmSound);
+            console.log('Custom sound URL:', model.customSoundUrl);
+            
             if (model.customSoundUrl && model.alarmSound === model.customSoundUrl) {
                 // Show custom sound
                 soundSelect.value = 'custom';
@@ -939,8 +1226,11 @@ class TimerView {
                 
                 if (matchingOption) {
                     soundSelect.value = model.alarmSound;
+                    console.log('Set sound to:', model.alarmSound);
                 } else {
-                    soundSelect.value = soundSelect.options[0].value; // Default to first option
+                    // If no match, default to first option but keep the current sound
+                    console.log('No matching option found, using current sound');
+                    soundSelect.value = model.alarmSound || soundSelect.options[0].value;
                 }
                 customSoundDiv.style.display = 'none';
             }
@@ -991,7 +1281,7 @@ class TimerView {
     }
 
     bindSettingsControls(handlers) {
-        const { open, close, save, resetDefaults, toggleAlarm, toggleAutoStart, testSound } = handlers;
+        const { open, close, save, resetDefaults, toggleAlarm, toggleAutoStart, testSound, exportData, importData } = handlers;
         
         // Settings button click handler
         if (this.settingsEl) {
@@ -1034,6 +1324,52 @@ class TimerView {
             testSoundBtn.addEventListener('click', testSound);
         }
         
+        // Export data button
+        const exportBtn = document.getElementById('export-data-btn');
+        if (exportBtn) {
+            exportBtn.addEventListener('click', exportData);
+        }
+        
+        // Import data button and file input
+        const importBtn = document.getElementById('import-data-btn');
+        const importFile = document.getElementById('import-file');
+        if (importBtn && importFile) {
+            importBtn.addEventListener('click', () => {
+                // Also show option to paste data directly
+                const pasteData = prompt('📥 You can either:\n1. Click OK to select a file, or\n2. Paste your data here directly:');
+                if (pasteData && pasteData.trim()) {
+                    try {
+                        const data = JSON.parse(pasteData);
+                        importData({ target: { result: JSON.stringify(data) } });
+                        return;
+                    } catch (error) {
+                        this.showSyncStatus('❌ Invalid JSON data pasted', 'error');
+                        return;
+                    }
+                }
+                importFile.click();
+            });
+            
+            importFile.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/json') {
+                    importData(file);
+                } else if (file) {
+                    this.showSyncStatus('Please select a valid JSON file', 'error');
+                }
+                // Reset file input
+                importFile.value = '';
+            });
+        }
+        
+        // QR code generator button
+        const qrBtn = document.getElementById('generate-qr-btn');
+        if (qrBtn) {
+            qrBtn.addEventListener('click', () => {
+                this.generateQRCode();
+            });
+        }
+        
         // Custom sound upload functionality
         const soundSelect = document.getElementById('alarm-sound');
         const customSoundUpload = document.getElementById('custom-sound-upload');
@@ -1042,12 +1378,16 @@ class TimerView {
         if (soundSelect && customSoundUpload && currentCustomSoundDiv) {
             // Handle sound selection change
             soundSelect.addEventListener('change', (e) => {
+                console.log('Sound selection changed to:', e.target.value);
                 if (e.target.value === 'custom') {
                     customSoundUpload.style.display = 'block';
                     customSoundUpload.click();
                 } else {
                     customSoundUpload.style.display = 'none';
                     currentCustomSoundDiv.style.display = 'none';
+                    // Immediately save the new sound selection
+                    this.model.setAlarmSound(e.target.value);
+                    console.log('Sound updated to:', e.target.value);
                 }
             });
             
@@ -1085,6 +1425,172 @@ class TimerView {
                 }
             });
         }
+    }
+    
+    // Show sync status message
+    showSyncStatus(message, type) {
+        const statusElement = document.getElementById('sync-status');
+        if (statusElement) {
+            statusElement.textContent = message;
+            statusElement.className = `sync-status ${type}`;
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusElement.className = 'sync-status';
+            }, 5000);
+        }
+    }
+    
+    // Generate QR code for data sharing
+    generateQRCode() {
+        const qrContainer = document.getElementById('qr-container');
+        const qrCodeDiv = document.getElementById('qr-code');
+        
+        if (!qrContainer || !qrCodeDiv) return;
+        
+        try {
+            // Create a smaller version of data for QR code (only essential settings)
+            const compactData = {
+                settings: {
+                    modes: this.model.modes,
+                    promodoroCount: this.model.promodoroCount
+                },
+                tasks: storage.loadTaskList().map(task => ({ text: task.text, completed: task.completed })), // Remove IDs and extra data
+                version: '1.0-compact'
+            };
+            
+            const dataStr = JSON.stringify(compactData);
+            
+            // Check if data is still too large for QR code
+            if (dataStr.length > 2000) {
+                // If still too large, offer only settings
+                const settingsOnly = {
+                    settings: compactData.settings,
+                    version: '1.0-settings-only'
+                };
+                const settingsStr = JSON.stringify(settingsOnly);
+                
+                if (settingsStr.length > 2000) {
+                    this.showSyncStatus('⚠️ Data too large for QR code. Use Export/Import instead.', 'info');
+                    return;
+                } else {
+                    this.generateQR(settingsStr, qrContainer, qrCodeDiv, 'Settings only (tasks excluded due to size)');
+                    return;
+                }
+            }
+            
+            this.generateQR(dataStr, qrContainer, qrCodeDiv, 'Complete data');
+        } catch (error) {
+            console.error('QR generation failed:', error);
+            this.showSyncStatus('❌ Failed to generate QR code.', 'error');
+        }
+    }
+    
+    // Helper method to generate QR code
+    generateQR(dataStr, qrContainer, qrCodeDiv, description) {
+        // Clear previous QR code
+        qrCodeDiv.innerHTML = '';
+        
+        // Try multiple QR generation methods
+        if (this.tryQRLibrary(dataStr, qrCodeDiv, description)) {
+            qrContainer.style.display = 'block';
+            this.showSyncStatus(`✅ QR code generated! ${description}`, 'success');
+        } else if (this.tryOnlineQR(dataStr, qrCodeDiv, description)) {
+            qrContainer.style.display = 'block';
+            this.showSyncStatus(`✅ QR code generated online! ${description}`, 'success');
+        } else {
+            // Ultimate fallback: Enhanced text display with copy functionality
+            this.createTextFallback(dataStr, qrCodeDiv, description);
+            qrContainer.style.display = 'block';
+            this.showSyncStatus('📋 Showing data as text. Copy to transfer manually.', 'info');
+        }
+    }
+    
+    // Try the QRCode library
+    tryQRLibrary(dataStr, qrCodeDiv, description) {
+        try {
+            if (typeof QRCode !== 'undefined') {
+                const size = dataStr.length > 1000 ? 150 : (dataStr.length > 500 ? 175 : 200);
+                const qr = new QRCode(qrCodeDiv, {
+                    text: dataStr,
+                    width: size,
+                    height: size,
+                    colorDark: "#000000",
+                    colorLight: "#ffffff",
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                return true;
+            }
+        } catch (error) {
+            console.log('QRCode library failed:', error);
+        }
+        return false;
+    }
+    
+    // Try online QR generator as fallback
+    tryOnlineQR(dataStr, qrCodeDiv, description) {
+        try {
+            // Use Google Charts API for QR generation
+            const encodedData = encodeURIComponent(dataStr);
+            const size = dataStr.length > 1000 ? 150 : (dataStr.length > 500 ? 175 : 200);
+            const qrUrl = `https://chart.googleapis.com/chart?chs=${size}x${size}&cht=qr&chl=${encodedData}`;
+            
+            const img = document.createElement('img');
+            img.src = qrUrl;
+            img.alt = 'QR Code';
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            
+            // Test if the image loads
+            img.onload = () => {
+                qrCodeDiv.appendChild(img);
+            };
+            
+            img.onerror = () => {
+                console.log('Online QR generation failed');
+                return false;
+            };
+            
+            qrCodeDiv.appendChild(img);
+            return true;
+        } catch (error) {
+            console.log('Online QR generation failed:', error);
+        }
+        return false;
+    }
+    
+    // Enhanced text fallback with copy functionality
+    createTextFallback(dataStr, qrCodeDiv, description) {
+        const fallbackDiv = document.createElement('div');
+        fallbackDiv.style.cssText = `
+            padding: 15px; 
+            background: #f8f9fa; 
+            border: 2px dashed #dee2e6; 
+            border-radius: 8px; 
+            font-family: monospace; 
+            font-size: 11px;
+            line-height: 1.4;
+            max-height: 200px;
+            overflow-y: auto;
+        `;
+        
+        fallbackDiv.innerHTML = `
+            <div style="margin-bottom: 10px; font-weight: bold; color: #495057;">
+                📱 Manual Transfer Data (${description})
+            </div>
+            <div style="background: white; padding: 10px; border-radius: 4px; word-break: break-all; margin-bottom: 10px; border: 1px solid #dee2e6;">
+                ${dataStr}
+            </div>
+            <button onclick="navigator.clipboard.writeText('${dataStr.replace(/'/g, "\\'")}').then(() => alert('✅ Data copied to clipboard!')).catch(() => alert('❌ Copy failed. Please select and copy manually.'))" 
+                    style="padding: 8px 12px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 8px;">
+                📋 Copy Data
+            </button>
+            <small style="color: #6c757d; display: block; margin-top: 8px;">
+                💡 Tip: Copy this data and paste it into the Import field on your other device
+            </small>
+        `;
+        
+        qrCodeDiv.appendChild(fallbackDiv);
     }
 
     bindTaskInput(addTaskHandler, deleteTaskHandler, selectTaskHandler, viewHistoryHandler) {
@@ -1283,6 +1789,16 @@ class TimerView {
         });
         const mostProductiveDay = Object.keys(dayStats).reduce((a, b) => dayStats[a] > dayStats[b] ? a : b, 'N/A');
         
+        // Group sessions by date for daily view
+        const sessionsByDate = {};
+        history.forEach(session => {
+            const date = session.date;
+            if (!sessionsByDate[date]) {
+                sessionsByDate[date] = [];
+            }
+            sessionsByDate[date].push(session);
+        });
+        
         // Create modal
         const modal = document.createElement('div');
         modal.id = 'history-modal';
@@ -1293,7 +1809,7 @@ class TimerView {
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content history-modal-content';
         
-        // Add header with better styling
+        // Add header with better styling and tabs
         modalContent.innerHTML = `
             <div class="history-header">
                 <span class="close-modal">&times;</span>
@@ -1321,60 +1837,72 @@ class TimerView {
                     <div class="stat-label">Most Active Day</div>
                 </div>
             </div>
+            
+            <div class="history-content">
+                <div id="daily-view" class="tab-content active"></div>
+            </div>
         `;
-        
-        // Add history list
-        if (history.length > 0) {
-            const historyList = document.createElement('div');
-            historyList.className = 'history-list';
-            
-            // Add section header
-            const listHeader = document.createElement('div');
-            listHeader.className = 'history-list-header';
-            listHeader.innerHTML = '<h3>📅 Session Timeline</h3>';
-            historyList.appendChild(listHeader);
-            
-            // Sort history by date (newest first)
-            const sortedHistory = [...history].reverse();
-            
-            sortedHistory.forEach((session, index) => {
-                const sessionItem = document.createElement('div');
-                sessionItem.className = 'history-item';
-                
-                // Get session type icon
-                const modeIcon = session.mode === 'promodoro' ? '🍅' : (session.mode === 'shortBreak' ? '☕' : '🛋️');
-                const modeLabel = session.mode === 'promodoro' ? 'Work' : (session.mode === 'shortBreak' ? 'Short Break' : 'Long Break');
-                
-                sessionItem.innerHTML = `
-                    <div class="history-item-header">
-                        <div class="session-info">
-                            <span class="session-icon">${modeIcon}</span>
-                            <span class="session-type">${modeLabel}</span>
-                        </div>
-                        <span class="session-duration">${session.duration} min</span>
-                    </div>
-                    <div class="history-item-details">
-                        <span class="session-date">📅 ${session.date}</span>
-                        <span class="session-time">🕐 ${session.time}</span>
-                    </div>
-                `;
-                historyList.appendChild(sessionItem);
-            });
-            
-            modalContent.appendChild(historyList);
-        } else {
-            const emptyMessage = document.createElement('div');
-            emptyMessage.className = 'empty-history';
-            emptyMessage.innerHTML = `
-                <div class="empty-icon">📝</div>
-                <h3>No sessions yet</h3>
-                <p>Start working on this task to see your session history here!</p>
-            `;
-            modalContent.appendChild(emptyMessage);
-        }
         
         modal.appendChild(modalContent);
         document.body.appendChild(modal);
+        
+        // Populate daily view
+        const dailyView = modal.querySelector('#daily-view');
+        if (history.length > 0) {
+            // Sort dates in descending order (newest first) using timestamp
+            const sortedDates = Object.keys(sessionsByDate).sort((a, b) => {
+                // Get the most recent session timestamp for each date to sort by
+                const aTimestamp = Math.max(...sessionsByDate[a].map(s => s.timestamp));
+                const bTimestamp = Math.max(...sessionsByDate[b].map(s => s.timestamp));
+                return bTimestamp - aTimestamp;
+            });
+            
+            sortedDates.forEach(date => {
+                const daySessions = sessionsByDate[date];
+                const dayMinutes = daySessions.reduce((sum, session) => sum + session.duration, 0);
+                const dayHours = Math.floor(dayMinutes / 60);
+                const dayRemainingMinutes = dayMinutes % 60;
+                
+                const dayGroup = document.createElement('div');
+                dayGroup.className = 'day-group';
+                
+                dayGroup.innerHTML = `
+                    <div class="day-header">
+                        <div class="day-info">
+                            <h4>${date}</h4>
+                            <span class="day-stats">${daySessions.length} sessions • ${dayHours > 0 ? dayHours + 'h ' : ''}${dayRemainingMinutes}m</span>
+                        </div>
+                    </div>
+                    <div class="day-sessions">
+                        ${daySessions.sort((a, b) => b.timestamp - a.timestamp).map(session => {
+                            const modeIcon = session.mode === 'promodoro' ? '🍅' : (session.mode === 'shortBreak' ? '☕' : '🛋️');
+                            const modeLabel = session.mode === 'promodoro' ? 'Work' : (session.mode === 'shortBreak' ? 'Short Break' : 'Long Break');
+                            
+                            return `
+                                <div class="session-item">
+                                    <span class="session-icon">${modeIcon}</span>
+                                    <span class="session-type">${modeLabel}</span>
+                                    <span class="session-time">🕐 ${session.time}</span>
+                                    <span class="session-duration">${session.duration}m</span>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                
+                dailyView.appendChild(dayGroup);
+            });
+        } else {
+            dailyView.innerHTML = `
+                <div class="empty-history">
+                    <div class="empty-icon">📝</div>
+                    <h3>No sessions yet</h3>
+                    <p>Start working on this task to see your session history here!</p>
+                </div>
+            `;
+        }
+        
+
         
         // Add close functionality
         const closeBtn = modal.querySelector('.close-modal');
@@ -1420,7 +1948,9 @@ class TimerController {
             resetDefaults: this.handleResetDefaults.bind(this),
             toggleAlarm: this.handleToggleAlarm.bind(this),
             toggleAutoStart: this.handleToggleAutoStart.bind(this),
-            testSound: this.handleTestSound.bind(this)
+            testSound: this.handleTestSound.bind(this),
+            exportData: this.handleExportData.bind(this),
+            importData: this.handleImportData.bind(this)
         });
         
         this.view.bindTaskInput(
@@ -1489,6 +2019,9 @@ class TimerController {
             }
         }
         
+        // Force update the settings panel to reflect current values
+        this.view.updateSettingsPanelValues(this.model);
+        
         // Save settings explicitly
         this.model.saveSettings();
         
@@ -1517,10 +2050,9 @@ class TimerController {
     }
     
     handleTestSound() {
-        const soundSelect = document.getElementById('alarm-sound');
-        if (soundSelect) {
-            const audio = new Audio(soundSelect.value);
-            audio.play().catch(err => console.error("Error playing test sound:", err));
+        console.log('Testing sound');
+        if (this.model.alarmEnabled) {
+            this.model.playAlarmSound();
         }
     }
     
@@ -1557,6 +2089,84 @@ class TimerController {
             if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
                 Notification.requestPermission();
             }
+        }
+    }
+    
+    handleExportData() {
+        try {
+            const data = this.model.exportData();
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            // Create download link
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `promodoro-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+            
+            this.view.showSyncStatus('✅ Data exported successfully! File downloaded.', 'success');
+        } catch (error) {
+            console.error('Export failed:', error);
+            this.view.showSyncStatus('❌ Export failed. Please try again.', 'error');
+        }
+    }
+    
+    handleImportData(file) {
+        // Handle both file input and direct data paste
+        if (file.target && file.target.result) {
+            // Direct data paste
+            this.processImportData(file.target.result);
+        } else {
+            // File upload
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                this.processImportData(e.target.result);
+            };
+            
+            reader.onerror = () => {
+                this.view.showSyncStatus('❌ Failed to read file.', 'error');
+            };
+            
+            reader.readAsText(file);
+        }
+    }
+    
+    processImportData(dataString) {
+        try {
+            const data = JSON.parse(dataString);
+            const success = this.model.importData(data);
+            
+            if (success) {
+                // Refresh the view to show imported data
+                this.view.updateDisplay(this.model);
+                this.view.updateSettingsPanelValues(this.model);
+                
+                // Reload task list
+                const savedTasks = storage.loadTaskList();
+                const taskList = document.getElementById('task-list');
+                if (taskList) {
+                    taskList.innerHTML = '';
+                    savedTasks.forEach(task => {
+                        this.view.addTaskToList(task.text, task.completed, task.id);
+                    });
+                }
+                
+                this.view.showSyncStatus('✅ Data imported successfully!', 'success');
+            } else {
+                this.view.showSyncStatus('❌ Import failed. Invalid data format.', 'error');
+            }
+        } catch (error) {
+            console.error('Import failed:', error);
+            this.view.showSyncStatus('❌ Import failed. Invalid JSON data.', 'error');
         }
     }
 }
@@ -1993,6 +2603,181 @@ document.addEventListener('DOMContentLoaded', () => {
             margin: 0;
             font-style: italic;
             color: #999;
+        }
+        
+        /* Tab Styles */
+        .history-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+        }
+        
+        .tab-button {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #666;
+            padding: 10px 16px;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .tab-button:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .tab-button.active {
+            background: #FF9800;
+            color: white;
+            border-color: #FF9800;
+            transform: translateY(2px);
+        }
+        
+        .tab-button.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #FF9800;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Daily View Styles */
+        .day-group {
+            margin-bottom: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .day-header {
+            background: linear-gradient(135deg, #FF9800, #f57c00);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .day-info h4 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .day-stats {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .day-sessions {
+            background: white;
+            padding: 15px 20px;
+        }
+        
+        .session-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .session-item:last-child {
+            border-bottom: none;
+        }
+        
+        .session-item .session-icon {
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .session-item .session-type {
+            flex: 1;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .session-item .session-time {
+            color: #666;
+            font-size: 12px;
+            min-width: 80px;
+        }
+        
+        .session-item .session-duration {
+            background: #FF9800;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 480px) {
+            .history-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .stat-card {
+                padding: 10px;
+            }
+            
+            .stat-number {
+                font-size: 16px;
+            }
+            
+            .tab-button {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .day-header {
+                padding: 12px 15px;
+            }
+            
+            .day-sessions {
+                padding: 12px 15px;
+            }
+            
+            .session-item {
+                gap: 8px;
+                padding: 6px 0;
+            }
+            
+            .session-item .session-type {
+                font-size: 13px;
+            }
+            
+            .session-item .session-time {
+                font-size: 11px;
+                min-width: 60px;
+            }
+            
+            .history-item {
+                padding: 10px 12px;
+            }
         }
     `;
     document.head.appendChild(style);
