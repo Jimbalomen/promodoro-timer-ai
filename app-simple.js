@@ -748,6 +748,7 @@ class TimerView {
                                     <button type="button" id="export-data-btn" class="sync-btn export-btn">📤 Export Data</button>
                                     <button type="button" id="import-file-btn" class="sync-btn import-btn">📁 Import File</button>
                                     <button type="button" id="import-paste-btn" class="sync-btn paste-btn">📋 Paste Data</button>
+                                    <button type="button" id="scan-qr-btn" class="sync-btn scan-btn">📷 Scan QR</button>
                                     <button type="button" id="generate-qr-btn" class="sync-btn qr-btn">📱 Share via QR</button>
                                 </div>
                                 <input type="file" id="import-file" accept=".json" style="display: none;">
@@ -755,6 +756,21 @@ class TimerView {
                                     <div id="qr-code"></div>
                                     <p>Scan with your mobile device to transfer data</p>
                                     <button type="button" onclick="document.getElementById('qr-container').style.display='none'">Close QR</button>
+                                </div>
+                                <div id="qr-scanner-container" class="qr-scanner-container" style="display: none;">
+                                    <div class="scanner-header">
+                                        <h4>📷 QR Code Scanner</h4>
+                                        <button type="button" id="close-scanner">✕</button>
+                                    </div>
+                                    <div id="scanner-video-container">
+                                        <video id="scanner-video" autoplay playsinline></video>
+                                        <canvas id="scanner-canvas" style="display: none;"></canvas>
+                                    </div>
+                                    <div id="scanner-status">Position QR code within the frame</div>
+                                    <div class="scanner-controls">
+                                        <button type="button" id="toggle-camera">🔄 Switch Camera</button>
+                                        <button type="button" id="stop-scanner">🛑 Stop Scanner</button>
+                                    </div>
                                 </div>
                                 <div id="sync-status" class="sync-status"></div>
                             </div>
@@ -964,6 +980,13 @@ class TimerView {
                     .paste-btn:hover {
                         background: #7B1FA2;
                     }
+                    .scan-btn {
+                        background: #FF5722;
+                        color: white;
+                    }
+                    .scan-btn:hover {
+                        background: #E64A19;
+                    }
                     .qr-btn {
                         background: #FF9800;
                         color: white;
@@ -994,6 +1017,83 @@ class TimerView {
                         border-radius: 4px;
                         cursor: pointer;
                         font-size: 12px;
+                    }
+                    
+                    /* QR Scanner Styles */
+                    .qr-scanner-container {
+                        margin: 20px 0;
+                        padding: 20px;
+                        background: #fff;
+                        border-radius: 12px;
+                        border: 2px solid #FF5722;
+                        box-shadow: 0 4px 12px rgba(255, 87, 34, 0.15);
+                    }
+                    .scanner-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 15px;
+                    }
+                    .scanner-header h4 {
+                        margin: 0;
+                        color: #FF5722;
+                        font-size: 18px;
+                    }
+                    .scanner-header button {
+                        background: #f44336;
+                        color: white;
+                        border: none;
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50%;
+                        cursor: pointer;
+                        font-size: 16px;
+                    }
+                    #scanner-video-container {
+                        position: relative;
+                        width: 100%;
+                        max-width: 400px;
+                        margin: 0 auto;
+                        background: #000;
+                        border-radius: 8px;
+                        overflow: hidden;
+                    }
+                    #scanner-video {
+                        width: 100%;
+                        height: auto;
+                        display: block;
+                    }
+                    #scanner-status {
+                        text-align: center;
+                        margin: 15px 0;
+                        padding: 10px;
+                        background: #e3f2fd;
+                        border-radius: 6px;
+                        color: #1976d2;
+                        font-weight: 500;
+                    }
+                    .scanner-controls {
+                        display: flex;
+                        gap: 10px;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                    }
+                    .scanner-controls button {
+                        background: #FF5722;
+                        color: white;
+                        border: none;
+                        padding: 10px 15px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: background 0.3s;
+                    }
+                    .scanner-controls button:hover {
+                        background: #E64A19;
+                    }
+                    .scanner-controls button:disabled {
+                        background: #ccc;
+                        cursor: not-allowed;
                     }
                     .sync-status {
                         font-size: 12px;
@@ -1405,6 +1505,14 @@ class TimerView {
             });
         }
         
+        // QR code scanner button
+        const scanQrBtn = document.getElementById('scan-qr-btn');
+        if (scanQrBtn) {
+            scanQrBtn.addEventListener('click', () => {
+                this.initQRScanner();
+            });
+        }
+        
         // Custom sound upload functionality
         const soundSelect = document.getElementById('alarm-sound');
         const customSoundUpload = document.getElementById('custom-sound-upload');
@@ -1535,6 +1643,237 @@ class TimerView {
             console.error('QR generation failed:', error);
             this.showSyncStatus('❌ Failed to generate QR code.', 'error');
         }
+    }
+    
+    // Initialize QR Scanner
+    initQRScanner() {
+        const scannerContainer = document.getElementById('qr-scanner-container');
+        if (!scannerContainer) return;
+        
+        // Check if jsQR library is available
+        if (typeof jsQR === 'undefined') {
+            this.showSyncStatus('❌ QR Scanner library not loaded. Please refresh and try again.', 'error');
+            return;
+        }
+        
+        // Check for camera support
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            this.showSyncStatus('❌ Camera not supported on this device.', 'error');
+            return;
+        }
+        
+        // Show scanner
+        scannerContainer.style.display = 'block';
+        this.updateScannerStatus('📷 Requesting camera access...');
+        
+        // Setup controls
+        this.setupScannerControls();
+        
+        // Start video stream
+        this.startVideoStream();
+    }
+    
+    // Setup scanner controls
+    setupScannerControls() {
+        // Close scanner button
+        const closeBtn = document.getElementById('close-scanner');
+        const stopBtn = document.getElementById('stop-scanner');
+        const toggleBtn = document.getElementById('toggle-camera');
+        
+        if (closeBtn) {
+            closeBtn.onclick = () => this.stopQRScanner();
+        }
+        
+        if (stopBtn) {
+            stopBtn.onclick = () => this.stopQRScanner();
+        }
+        
+        if (toggleBtn) {
+            toggleBtn.onclick = () => this.toggleCamera();
+        }
+    }
+    
+    // Start video stream
+    async startVideoStream() {
+        const video = document.getElementById('scanner-video');
+        const canvas = document.getElementById('scanner-canvas');
+        
+        if (!video || !canvas) return;
+        
+        try {
+            // Try back camera first (better for scanning)
+            const constraints = {
+                video: {
+                    facingMode: this.currentFacingMode || 'environment'
+                }
+            };
+            
+            this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+            video.srcObject = this.stream;
+            
+            video.onloadedmetadata = () => {
+                video.play();
+                this.updateScannerStatus('✅ Camera ready! Position QR code in view');
+                
+                // Start scanning
+                this.scanQRCode(video, canvas);
+            };
+            
+        } catch (error) {
+            console.error('Camera access error:', error);
+            
+            if (error.name === 'NotAllowedError') {
+                this.updateScannerStatus('❌ Camera permission denied. Please allow camera access and try again.');
+            } else if (error.name === 'NotFoundError') {
+                this.updateScannerStatus('❌ No camera found on this device.');
+            } else {
+                this.updateScannerStatus('❌ Camera error: ' + error.message);
+            }
+        }
+    }
+    
+    // Main scanning loop
+    scanQRCode(video, canvas) {
+        const context = canvas.getContext('2d');
+        
+        const scan = () => {
+            if (video.readyState === video.HAVE_ENOUGH_DATA && this.stream) {
+                // Set canvas dimensions to match video
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                
+                // Draw video frame to canvas
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                
+                // Get image data
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Try to decode QR code
+                try {
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        // QR code found!
+                        this.updateScannerStatus('🎉 QR Code detected! Processing...');
+                        this.processScannedData(code.data);
+                        return; // Stop scanning
+                    }
+                } catch (error) {
+                    console.error('QR scan error:', error);
+                }
+            }
+            
+            // Continue scanning if still active
+            if (this.stream) {
+                requestAnimationFrame(scan);
+            }
+        };
+        
+        // Start scanning loop
+        scan();
+    }
+    
+        // Process scanned QR data
+    processScannedData(data) {
+        try {
+            // Try to parse as JSON
+            const parsedData = JSON.parse(data);
+            
+            // Check if it's our app's data format
+            if (parsedData.version || parsedData.v || parsedData.settings || parsedData.modes) {
+                // Stop scanner first
+                this.stopQRScanner();
+                
+                // Show confirmation dialog
+                const confirmImport = confirm(
+                    `🎉 QR Code detected!\n\n` +
+                    `Found: ${parsedData.version || parsedData.v || 'Unknown version'}\n` +
+                    `Contains: ${parsedData.settings ? 'Settings' : ''}${parsedData.tasks ? ', Tasks' : ''}${parsedData.modes ? ', Timer modes' : ''}\n\n` +
+                    `Do you want to import this data? This will overwrite your current settings.`
+                );
+                
+                if (confirmImport) {
+                    // Process the data like import
+                    if (this.controller) {
+                        this.controller.processImportData(data);
+                    }
+                    this.showSyncStatus('✅ QR Code data imported successfully!', 'success');
+                } else {
+                    this.showSyncStatus('❌ Import cancelled by user.', 'info');
+                }
+            } else {
+                this.updateScannerStatus('⚠️ Invalid QR code. Expected Pomodoro app data.');
+                // Continue scanning
+                setTimeout(() => {
+                    this.updateScannerStatus('🔍 Scanning for QR code...');
+                }, 2000);
+            }
+            
+        } catch (error) {
+            console.error('QR data processing error:', error);
+            this.updateScannerStatus('❌ Invalid QR code format. Expected JSON data.');
+            
+            // Continue scanning after a delay
+            setTimeout(() => {
+                this.updateScannerStatus('🔍 Scanning for QR code...');
+            }, 2000);
+        }
+    }
+    
+    // Update scanner status message
+    updateScannerStatus(message) {
+        const statusEl = document.getElementById('scanner-status');
+        if (statusEl) {
+            statusEl.textContent = message;
+        }
+    }
+    
+    // Toggle between front and back camera
+    async toggleCamera() {
+        const toggleBtn = document.getElementById('toggle-camera');
+        
+        // Disable button temporarily
+        if (toggleBtn) {
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = '🔄 Switching...';
+        }
+        
+        // Stop current stream
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // Toggle facing mode
+        this.currentFacingMode = this.currentFacingMode === 'environment' ? 'user' : 'environment';
+        
+        // Restart with new camera
+        await this.startVideoStream();
+        
+        // Re-enable button
+        if (toggleBtn) {
+            toggleBtn.disabled = false;
+            toggleBtn.textContent = '🔄 Switch Camera';
+        }
+    }
+    
+    // Stop QR scanner
+    stopQRScanner() {
+        // Stop video stream
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+            this.stream = null;
+        }
+        
+        // Hide scanner
+        const scannerContainer = document.getElementById('qr-scanner-container');
+        if (scannerContainer) {
+            scannerContainer.style.display = 'none';
+        }
+        
+        // Reset facing mode
+        this.currentFacingMode = 'environment';
+        
+        this.showSyncStatus('📷 QR Scanner stopped.', 'info');
     }
     
     // Helper method to generate QR code
