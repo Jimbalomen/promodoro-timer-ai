@@ -495,39 +495,54 @@ class TimerModel {
                     
                     // Import tasks with session history
                     if (data.tasks && Array.isArray(data.tasks)) {
-                        const currentTasks = storage.loadTaskList();
-                        const importedTasks = data.tasks.map(task => ({
-                            ...task,
-                            id: Date.now() + Math.random() // Generate new IDs
+                        console.log('Importing tasks from QR:', data.tasks);
+                        
+                        const importedTasks = data.tasks.map((task, index) => ({
+                            id: Date.now() + index + Math.random(), // Generate unique IDs
+                            text: task.text,
+                            completed: task.completed || false
                         }));
                         
-                        // Save tasks
+                        console.log('Generated tasks with new IDs:', importedTasks);
+                        
+                        // Save tasks first
                         storage.saveTaskList(importedTasks);
                         
                         // Import session history for each task
-                        data.tasks.forEach((task, index) => {
-                            if (task.history && task.history.length > 0) {
+                        const currentTaskHistory = this.taskHistory || {};
+                        const currentSessionHistory = this.sessionHistory || [];
+                        
+                        data.tasks.forEach((originalTask, index) => {
+                            if (originalTask.history && originalTask.history.length > 0) {
                                 const newTaskId = importedTasks[index].id;
+                                
+                                console.log(`Importing ${originalTask.history.length} sessions for task "${originalTask.text}" with new ID ${newTaskId}`);
+                                
                                 // Store session history with new task ID
-                                const sessions = task.history.map(session => ({
+                                const sessions = originalTask.history.map(session => ({
                                     ...session,
-                                    taskId: newTaskId
+                                    taskId: newTaskId,
+                                    id: session.id || Date.now() + Math.random()
                                 }));
                                 
-                                // Add to global session history
-                                const currentHistory = storage.loadSessionHistory() || [];
-                                const updatedHistory = currentHistory.concat(sessions);
-                                storage.saveSessionHistory(updatedHistory);
+                                // Update task history in memory and storage
+                                currentTaskHistory[newTaskId] = sessions;
+                                this.taskHistory[newTaskId] = sessions;
                                 
-                                // Update task history as well
-                                const currentTaskHistory = storage.loadTaskHistory() || {};
-                                if (!currentTaskHistory[newTaskId]) {
-                                    currentTaskHistory[newTaskId] = [];
-                                }
-                                currentTaskHistory[newTaskId] = currentTaskHistory[newTaskId].concat(sessions);
-                                storage.saveTaskHistory(currentTaskHistory);
+                                // Add to global session history
+                                currentSessionHistory.push(...sessions);
+                                
+                                console.log(`Added ${sessions.length} sessions for task ${newTaskId}`);
                             }
                         });
+                        
+                        // Save updated histories
+                        storage.saveTaskHistory(currentTaskHistory);
+                        storage.saveSessionHistory(currentSessionHistory);
+                        this.sessionHistory = currentSessionHistory;
+                        
+                        console.log('Final task history:', this.taskHistory);
+                        console.log('Final session history:', this.sessionHistory);
                     }
                     
                     this.saveSettings();
@@ -802,7 +817,6 @@ class TimerView {
                                 <div class="sync-buttons">
                                     <button type="button" id="export-data-btn" class="sync-btn export-btn">📤 Export Data</button>
                                     <button type="button" id="import-file-btn" class="sync-btn import-btn">📁 Import File</button>
-                                    <button type="button" id="import-paste-btn" class="sync-btn paste-btn">📋 Paste Data</button>
                                     <button type="button" id="scan-qr-btn" class="sync-btn scan-btn">📷 Scan QR</button>
                                     <button type="button" id="generate-qr-btn" class="sync-btn qr-btn">📱 Share via QR</button>
                                 </div>
@@ -1028,13 +1042,7 @@ class TimerView {
                     .import-btn:hover {
                         background: #1976D2;
                     }
-                    .paste-btn {
-                        background: #9C27B0;
-                        color: white;
-                    }
-                    .paste-btn:hover {
-                        background: #7B1FA2;
-                    }
+
                     .scan-btn {
                         background: #FF5722;
                         color: white;
@@ -1531,26 +1539,7 @@ class TimerView {
             });
         }
         
-        // Import paste button
-        const importPasteBtn = document.getElementById('import-paste-btn');
-        if (importPasteBtn) {
-            importPasteBtn.addEventListener('click', () => {
-                const pasteData = prompt('📋 Paste your exported JSON data here:\n\n(Click Cancel if you prefer to use a file instead)');
-                if (pasteData === null) {
-                    // User clicked Cancel - do nothing
-                    return;
-                } else if (pasteData.trim() === '') {
-                    this.showSyncStatus('⚠️ No data entered. Please paste your JSON data.', 'info');
-                } else {
-                    try {
-                        const data = JSON.parse(pasteData);
-                        importData({ target: { result: JSON.stringify(data) } });
-                    } catch (error) {
-                        this.showSyncStatus('❌ Invalid JSON data. Please check your data format.', 'error');
-                    }
-                }
-            });
-        }
+
         
         // QR code generator button
         const qrBtn = document.getElementById('generate-qr-btn');
@@ -1648,19 +1637,33 @@ class TimerView {
         
         try {
             // Create a smaller version of data for QR code (with session history)
+            const tasks = storage.loadTaskList();
             const compactData = {
                 settings: {
                     modes: this.model.modes,
                     promodoroCount: this.model.promodoroCount
                 },
-                tasks: storage.loadTaskList().map(task => ({
-                    text: task.text,
-                    completed: task.completed,
-                    sessions: this.model.getTaskSessionCount(task.id) || 0,
-                    history: this.model.getTaskHistory(task.id) || []
-                })),
+                tasks: tasks.map(task => {
+                    const taskHistory = this.model.getTaskHistory(task.id) || [];
+                    const sessionCount = taskHistory.length;
+                    
+                    console.log(`Task "${task.text}" (ID: ${task.id}):`, {
+                        sessionCount: sessionCount,
+                        historyLength: taskHistory.length,
+                        history: taskHistory
+                    });
+                    
+                    return {
+                        text: task.text,
+                        completed: task.completed,
+                        sessions: sessionCount,
+                        history: taskHistory
+                    };
+                }),
                 version: '1.0-compact-with-history'
             };
+            
+            console.log('QR Export Data:', compactData);
             
             const dataStr = JSON.stringify(compactData);
             
